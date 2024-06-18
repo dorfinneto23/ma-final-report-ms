@@ -78,9 +78,10 @@ def union_clinic_areas(table_name, caseid):
     combined_content = ""
     file_name = f"final-{caseid}.txt"
     for entity in entities:
+        clinic_area = entity['RowKey']
         content_path = entity['assistantResponsefiltered']
         filecontent = get_contentcsv(content_path)
-        combined_content += filecontent + "\n"
+        combined_content += clinic_area + "\n" + filecontent + "\n"
     save_union_clinic_areas(combined_content,caseid,file_name)
     logging.info(f"union_clinic_areas: combined_content done")
 
