@@ -74,14 +74,15 @@ def union_clinic_areas(table_name, caseid):
     # Query the table for entities with the given PartitionKey
     entities = table_client.query_entities(f"PartitionKey eq '{caseid}'")
 
-    # Print the RowKey for each entity
+    # union assistantResponsefiltered into one file for each entity
     combined_content = ""
     file_name = f"final-{caseid}.txt"
     for entity in entities:
         clinic_area = entity['RowKey']
         content_path = entity['assistantResponsefiltered']
         filecontent = get_contentcsv(content_path)
-        combined_content += clinic_area + "\n" + filecontent + "\n"
+        if filecontent!="no disabilities found.":
+            combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     save_union_clinic_areas(combined_content,caseid,file_name)
     logging.info(f"union_clinic_areas: combined_content done")
 
