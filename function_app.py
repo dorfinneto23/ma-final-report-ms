@@ -49,14 +49,14 @@ def orgainze_content(finalReport):
     
     try:
         mission = mission = (
-            f"please organize the following report :\n{finalReport}\n"
+            f"please add markdown and organize the following report :\n{finalReport}\n"
         )
         #chat request for content analysis 
         response = client.chat.completions.create(
                     model=openai_model,
                     messages=[
                         {"role": "system", "content": mission},
-                        {"role": "user", "content": "Please provide the filtered text without paragraphs where Disability Percentage is 0%."}
+                        {"role": "user", "content": "please add markdown and organize the following report"}
                     ]
          )
         logging.info(f"Response from openai: {response.choices[0].message.content}")
@@ -151,7 +151,13 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
                 # Add new paragraphs
                 for text in new_paragraphs:
                     new_para = template_doc.add_paragraph(text)
-                    new_para.style = temp_doc.styles['Normal']
+                    for run in text.runs:
+                        new_run = new_para.add_run(run.text)
+                        new_run.bold = run.bold
+                        new_run.italic = run.italic
+                        new_run.underline = run.underline
+                        new_run.font.size = run.font.size
+
 
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
