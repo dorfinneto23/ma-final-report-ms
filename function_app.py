@@ -12,6 +12,7 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # i
 import csv #helping convert json to csv
 import requests #in order to use translation function 
 import uuid  #in order to use translation function 
+from docx import Document
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -30,37 +31,100 @@ password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
 
 
+
+
+# Helper function to download blob content to stream 
+def download_blob_stream(path):
+        # Create a BlobServiceClient using the connection string
+        container_name = "medicalanalysis"
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
+        container_client = blob_service_client.get_container_client(container_name)
+        blob_client = container_client.get_blob_client(path)
+        stream = io.BytesIO()
+        blob_client.download_blob().download_to_stream(stream)
+        stream.seek(0)
+        return stream
+
+def convert_txt_to_docx_with_reference(txt_blob_path):
+   try:
+        #reference docx file  
+        reference_docx_blob_path = "configuration/custom-reference.docx"
+        # Download the txt file content
+        txt_stream = download_blob_stream(txt_blob_path)
+        txt_content = txt_stream.getvalue().decode('utf-8')
+
+        # Download the reference docx content
+        reference_stream = download_blob_stream(reference_docx_blob_path)
+        reference_doc = Document(reference_stream)
+        
+        # Create a new Document object
+        new_doc = Document()
+
+        # Copy styles from reference document to new document
+        new_doc.styles = reference_doc.styles
+
+        # Add the content from the txt file to the new document with basic formatting
+        for paragraph in txt_content.split('\n'):
+            p = new_doc.add_paragraph(paragraph)
+            # Applying basic styles from the first paragraph of the reference doc
+            if reference_doc.paragraphs:
+                ref_style = reference_doc.paragraphs[0].style
+                p.style = ref_style
+
+        # Save the new document to a stream
+        new_doc_stream = io.BytesIO()
+        new_doc.save(new_doc_stream)
+        new_doc_stream.seek(0)
+
+        # Save the new document to the specified path in Azure Storage
+        doc_file_name =  f"final.docx"
+        #final_blob_path = 'final/new.docx'
+        #final_container_name, final_blob_name = final_blob_path.split('/', 1)
+        #final_blob_client = blob_service_client.get_blob_client(container=final_container_name, blob=final_blob_name)
+        #final_blob_client.upload_blob(new_doc_stream, overwrite=True)
+        docx_path = save_final_files(new_doc_stream,doc_file_name)
+        logging.info(f"Document saved to {docx_path}")
+
+   except Exception as e:
+        logging.error(f"An error occurred:, {str(e)}")
+
+
+
+
 #Translate conent language 
 def translate_text(text, to_language='he'):
-    key = translate_key
-    endpoint = "https://api.cognitive.microsofttranslator.com/"
-    location = "eastus"
-    path = '/translate'
-    constructed_url = endpoint + path
+    try:
+        key = translate_key
+        endpoint = "https://api.cognitive.microsofttranslator.com/"
+        location = "eastus"
+        path = '/translate'
+        constructed_url = endpoint + path
 
-    params = {
-        'api-version': '3.0',
-        'from': 'en',
-        'to': [to_language]
-    }
+        params = {
+            'api-version': '3.0',
+            'from': 'en',
+            'to': [to_language]
+        }
 
-    headers = {
-        'Ocp-Apim-Subscription-Key': key,
-        'Ocp-Apim-Subscription-Region': location,
-        'Content-type': 'application/json',
-        'X-ClientTraceId': str(uuid.uuid4())
-    }
+        headers = {
+            'Ocp-Apim-Subscription-Key': key,
+            'Ocp-Apim-Subscription-Region': location,
+            'Content-type': 'application/json',
+            'X-ClientTraceId': str(uuid.uuid4())
+        }
 
-    body = [{
-        'text': text
-    }]
+        body = [{
+            'text': text
+        }]
 
-    response = requests.post(constructed_url, params=params, headers=headers, json=body)
-    response.raise_for_status()
+        response = requests.post(constructed_url, params=params, headers=headers, json=body)
+        response.raise_for_status()
 
-    translations = response.json()
-    translated_text = translations[0]['translations'][0]['text']
-    return translated_text
+        translations = response.json()
+        translated_text = translations[0]['translations'][0]['text']
+        return translated_text
+    except Exception as e:
+        logging.error(f"An error occurred:, {str(e)}")
 
 #save ContentByClinicAreas content 
 def save_final_files(content,caseid,filename):
@@ -79,22 +143,23 @@ def save_final_files(content,caseid,filename):
         return destinationPath
     
     except Exception as e:
-        print("An error occurred:", str(e))
+        logging.info(f"An error occurred:, {str(e)}")
+
 
 # get content csv path from azure table storage 
-def get_contentcsv(path):
+def get_content(path):
     try:
-        logging.info(f"get_contentcsv function strating, path value: {path}")
+        logging.info(f"get_content function strating, path value: {path}")
         container_name = "medicalanalysis"
         blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
         container_client = blob_service_client.get_container_client(container_name)
         blob_client = container_client.get_blob_client(path)
         download_stream = blob_client.download_blob()
         filecontent  = download_stream.read().decode('utf-8')
-        logging.info(f"get_contentcsv: data from the txt file is {filecontent}")
+        logging.info(f"get_content: data from the txt file is {filecontent}")
         return filecontent
     except Exception as e:
-        logging.error(f"get_contentcsv: Error update case: {str(e)}")
+        logging.error(f"get_content: Error update case: {str(e)}")
         return None    
     
 
@@ -116,17 +181,20 @@ def union_clinic_areas(table_name, caseid):
     for entity in entities:
         clinic_area = entity['RowKey']
         content_path = entity['assistantResponsefiltered']
-        filecontent = get_contentcsv(content_path)
+        filecontent = get_content(content_path)
         if filecontent!="no disabilities found.":
             combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
     save_final_files(combined_content,caseid,union_file_name)
     text_heb = translate_text(combined_content)
     heb_file_name = f"final-{caseid}-heb.txt"
-    save_final_files(text_heb,caseid,heb_file_name)
+    #save heb file
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name)
     logging.info(f"union_clinic_areas: combined_content done")
+    #convert heb txt file to docx 
+    convert_txt_to_docx_with_reference(heb_file_path)
     
-
+   
 
 app = func.FunctionApp()
 
@@ -139,3 +207,4 @@ def finalReportMs(azservicebus: func.ServiceBusMessage):
     caseid = message_data_dict['caseid']
     union_clinic_areas_path = union_clinic_areas("contentByClinicAreas",caseid)
     logging.info(f"union_clinic_areas path: {union_clinic_areas_path}")
+   
