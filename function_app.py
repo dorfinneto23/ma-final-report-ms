@@ -44,19 +44,19 @@ client = AzureOpenAI(
 openai_model = "ProofitGPT4o"
 
 
-#  Function filers paragraphs where the disability percentage is not 0% by openai 
+#  Function using openai to organize the text  
 def orgainze_content(finalReport):
     
     try:
         mission = mission = (
-            f"please add markdown and organize the following report :\n{finalReport}\n"
+            f"please add markdown and organize the following report in Hebrew :\n{finalReport}\n"
         )
         #chat request for content analysis 
         response = client.chat.completions.create(
                     model=openai_model,
                     messages=[
                         {"role": "system", "content": mission},
-                        {"role": "user", "content": "please add markdown and organize the following report"}
+                        {"role": "user", "content": "please add markdown and organize the following report in Hebrew"}
                     ]
          )
         logging.info(f"Response from openai: {response.choices[0].message.content}")
@@ -146,10 +146,10 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         txt_content = txt_stream.getvalue().decode('utf-8')
         
         #organize report content by openai 
-        organize_content = orgainze_content(txt_content)
+        #organize_content = orgainze_content(txt_content)
 
         # Convert Markdown to HTML
-        html_content = markdown(organize_content)
+        html_content = markdown(txt_content)
 
         # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
