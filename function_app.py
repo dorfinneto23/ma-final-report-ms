@@ -106,12 +106,12 @@ def download_blob_stream(path):
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
-        
-        # Download the txt file content
+            
+                # Download the txt file content
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
         
-        # Organize report content using openai
+        #organize report content by openai 
         organize_content = orgainze_content(txt_content)
 
         # Convert Markdown to HTML
@@ -136,27 +136,15 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Replace placeholder content in the template
         template_doc = Document(reference_file_path)
-        new_paragraphs = []
-        for paragraph in temp_doc.paragraphs:
-            new_paragraphs.append(paragraph)
-
-        # Insert new paragraphs into the template
+        template_doc.save(temp_doc_path)
+        template_doc = Document(temp_doc_path)
+        
         for paragraph in template_doc.paragraphs:
             if '{{ content }}' in paragraph.text:
-                # Clear the placeholder paragraph
-                p = paragraph._element
-                p.getparent().remove(p)
-                p._p = p._element = None
-
-                # Add new paragraphs
-                for temp_paragraph in new_paragraphs:
-                    new_para = template_doc.add_paragraph(temp_paragraph.text)
-                    for run in temp_paragraph.runs:
-                        new_run = new_para.add_run(run.text)
-                        new_run.bold = run.bold
-                        new_run.italic = run.italic
-                        new_run.underline = run.underline
-                        new_run.font.size = run.font.size
+                paragraph.clear()
+                for elem in temp_doc.paragraphs:
+                    new_para = paragraph.insert_paragraph_before(elem.text)
+                    new_para.style = elem.style
 
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
@@ -172,13 +160,12 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         doc_file_name = "final.docx"
         docx_path = save_final_files(new_doc_stream, caseid, doc_file_name)
         logging.info(f"Document saved to {docx_path}")
-
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
 
 
 
-#Translate conent language 
+#Translate content given language 
 def translate_text(text, to_language='he'):
     try:
         key = translate_key
@@ -213,7 +200,7 @@ def translate_text(text, to_language='he'):
     except Exception as e:
         logging.error(f"An error occurred:, {str(e)}")
 
-#save ContentByClinicAreas content 
+#save files in "final" folder
 def save_final_files(content,caseid,filename):
     try:
         logging.info(f"save_ContentByClinicAreas start, content: {content},caseid: {caseid},filename: {filename}")
@@ -233,7 +220,7 @@ def save_final_files(content,caseid,filename):
         logging.info(f"An error occurred:, {str(e)}")
 
 
-# get content csv path from azure table storage 
+# get content from txt file by path from azure table storage 
 def get_content(path):
     try:
         logging.info(f"get_content function strating, path value: {path}")
@@ -250,7 +237,7 @@ def get_content(path):
         return None    
     
 
-#this function union all clinic areas content into one file 
+#main function to create and manage all final files 
 def union_clinic_areas(table_name, caseid):
     # Create a TableServiceClient object using the connection string
     service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
