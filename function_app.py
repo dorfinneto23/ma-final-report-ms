@@ -138,7 +138,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         template_doc = Document(reference_file_path)
         new_paragraphs = []
         for paragraph in temp_doc.paragraphs:
-            new_paragraphs.append(paragraph.text)
+            new_paragraphs.append(paragraph)
 
         # Insert new paragraphs into the template
         for paragraph in template_doc.paragraphs:
@@ -149,15 +149,14 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
                 p._p = p._element = None
 
                 # Add new paragraphs
-                for text in new_paragraphs:
-                    new_para = template_doc.add_paragraph(text)
-                    for run in text.runs:
+                for temp_paragraph in new_paragraphs:
+                    new_para = template_doc.add_paragraph(temp_paragraph.text)
+                    for run in temp_paragraph.runs:
                         new_run = new_para.add_run(run.text)
                         new_run.bold = run.bold
                         new_run.italic = run.italic
                         new_run.underline = run.underline
                         new_run.font.size = run.font.size
-
 
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
