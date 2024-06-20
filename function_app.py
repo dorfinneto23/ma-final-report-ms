@@ -111,7 +111,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
         
-        #organize report content by openai 
+        # Organize report content using openai
         organize_content = orgainze_content(txt_content)
 
         # Convert Markdown to HTML
@@ -136,15 +136,22 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Replace placeholder content in the template
         template_doc = Document(reference_file_path)
-        template_doc.save(temp_doc_path)
-        template_doc = Document(temp_doc_path)
-        
+        new_paragraphs = []
+        for paragraph in temp_doc.paragraphs:
+            new_paragraphs.append(paragraph.text)
+
+        # Insert new paragraphs into the template
         for paragraph in template_doc.paragraphs:
             if '{{ content }}' in paragraph.text:
-                paragraph.clear()
-                for elem in temp_doc.paragraphs:
-                    new_para = paragraph.insert_paragraph_before(elem.text)
-                    new_para.style = elem.style
+                # Clear the placeholder paragraph
+                p = paragraph._element
+                p.getparent().remove(p)
+                p._p = p._element = None
+
+                # Add new paragraphs
+                for text in new_paragraphs:
+                    new_para = template_doc.add_paragraph(text)
+                    new_para.style = temp_doc.styles['Normal']
 
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
