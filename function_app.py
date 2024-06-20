@@ -34,7 +34,38 @@ password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
 
 
+#OpenAI Details 
+client = AzureOpenAI(
+  api_key = os.environ.get('AzureOpenAI_pi_key'),
+  api_version = "2024-02-01",
+  azure_endpoint = "https://openaisponsorship.openai.azure.com/"
+)
 
+openai_model = "ProofitGPT4o"
+
+
+#  Function filers paragraphs where the disability percentage is not 0% by openai 
+def orgainze_content(finalReport):
+    
+    try:
+        mission = mission = (
+            f"please organize the following report :\n{finalReport}\n"
+        )
+        #chat request for content analysis 
+        response = client.chat.completions.create(
+                    model=openai_model,
+                    messages=[
+                        {"role": "system", "content": mission},
+                        {"role": "user", "content": "Please provide the filtered text without paragraphs where Disability Percentage is 0%."}
+                    ]
+         )
+        logging.info(f"Response from openai: {response.choices[0].message.content}")
+        result = response.choices[0].message.content.lower()
+        return result
+    except Exception as e:
+        return f"{str(e)}"  
+
+##HTML Elemnets into docx 
 def add_html_to_docx(doc, html_content):
     """Add HTML content to a DOCX document."""
     soup = BeautifulSoup(html_content, "html.parser")
@@ -79,9 +110,12 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         # Download the txt file content
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
+        
+        #organize report content by openai 
+        organize_content = orgainze_content(txt_content)
 
         # Convert Markdown to HTML
-        html_content = markdown(txt_content)
+        html_content = markdown(organize_content)
 
         # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
