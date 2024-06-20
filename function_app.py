@@ -76,15 +76,13 @@ def add_html_to_docx(doc, html_content):
             doc.add_paragraph(element.get_text())
         elif element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             p = doc.add_paragraph(element.get_text())
-            p.style = f'Heading {int(element.name[1])}'
+            p.style = f'Heading{int(element.name[1])}'
         elif element.name == "ul":
             for li in element.find_all("li"):
-                p = doc.add_paragraph(li.get_text(), style='List Bullet')
-                p.paragraph_format.left_indent = Pt(36)  # Optional: Adjust indentation for bullet points
+                doc.add_paragraph(li.get_text(), style='ListBullet')
         elif element.name == "ol":
             for li in element.find_all("li"):
-                p = doc.add_paragraph(li.get_text(), style='List Number')
-                p.paragraph_format.left_indent = Pt(36)  # Optional: Adjust indentation for numbered lists
+                doc.add_paragraph(li.get_text(), style='ListNumber')
         elif element.name == "strong":
             run = doc.add_paragraph().add_run(element.get_text())
             run.bold = True
