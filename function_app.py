@@ -45,7 +45,7 @@ def download_blob_stream(path):
         stream.seek(0)
         return stream
 
-def convert_txt_to_docx_with_reference(txt_blob_path):
+def convert_txt_to_docx_with_reference(txt_blob_path,caseid):
    try:
         #reference docx file  
         reference_docx_blob_path = "configuration/custom-reference.docx"
@@ -79,7 +79,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path):
         #final_container_name, final_blob_name = final_blob_path.split('/', 1)
         #final_blob_client = blob_service_client.get_blob_client(container=final_container_name, blob=final_blob_name)
         #final_blob_client.upload_blob(new_doc_stream, overwrite=True)
-        docx_path = save_final_files(new_doc_stream,doc_file_name)
+        docx_path = save_final_files(new_doc_stream,caseid,doc_file_name)
         logging.info(f"Document saved to {docx_path}")
 
    except Exception as e:
@@ -189,7 +189,7 @@ def union_clinic_areas(table_name, caseid):
     heb_file_path = save_final_files(text_heb,caseid,heb_file_name)
     logging.info(f"union_clinic_areas: combined_content done")
     #convert heb txt file to docx 
-    convert_txt_to_docx_with_reference(heb_file_path)
+    convert_txt_to_docx_with_reference(heb_file_path,caseid)
     
    
 
