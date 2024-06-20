@@ -14,6 +14,7 @@ import requests #in order to use translation function
 import uuid  #in order to use translation function 
 from docx import Document
 import subprocess
+import pypandoc
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
