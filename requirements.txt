@@ -12,3 +12,4 @@ requests
 docxtpl
 markdown2 
 python-docx
+beautifulsoup4 

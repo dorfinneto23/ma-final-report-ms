@@ -13,7 +13,9 @@ import csv #helping convert json to csv
 import requests #in order to use translation function 
 import uuid  #in order to use translation function 
 from docxtpl import DocxTemplate, RichText #convert to docx 
-import markdown2 # part of organize the text on the conver txt to docx
+from markdown2 import markdown # part of organize the text on the conver txt to docx
+from bs4 import BeautifulSoup
+from docx import Document
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -33,6 +35,30 @@ driver= '{ODBC Driver 18 for SQL Server}'
 
 
 
+def add_html_to_docx(doc, html_content):
+    """Add HTML content to a DOCX document."""
+    soup = BeautifulSoup(html_content, "html.parser")
+    for element in soup:
+        if isinstance(element, str):
+            doc.add_paragraph(element)
+        elif element.name == "p":
+            doc.add_paragraph(element.get_text())
+        elif element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+            p = doc.add_paragraph(element.get_text())
+            p.style = f'Heading{int(element.name[1])}'
+        elif element.name == "ul":
+            for li in element.find_all("li"):
+                doc.add_paragraph(li.get_text(), style='ListBullet')
+        elif element.name == "ol":
+            for li in element.find_all("li"):
+                doc.add_paragraph(li.get_text(), style='ListNumber')
+        elif element.name == "strong":
+            run = doc.add_paragraph().add_run(element.get_text())
+            run.bold = True
+        elif element.name == "em":
+            run = doc.add_paragraph().add_run(element.get_text())
+            run.italic = True
+        # Handle other HTML elements as needed
 
 # Helper function to download blob content to stream 
 def download_blob_stream(path):
@@ -55,8 +81,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         txt_content = txt_stream.getvalue().decode('utf-8')
 
         # Convert Markdown to HTML
-        html_content = markdown2.markdown(txt_content)
-
+        html_content = markdown(txt_content)
 
         # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
@@ -67,17 +92,31 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         # Load the DOCX template
         doc = DocxTemplate(reference_file_path)
 
-        # Prepare context for replacing the placeholder
-        context = {'content': RichText(html_content, parse_xml=True)}  # No need for double newline
+        # Prepare context by creating a new DOCX document
+        temp_doc_path = "/tmp/temp_doc.docx"
+        temp_doc = Document()
         
-        # Render text into template
-        doc.render(context)
+        # Add HTML content to the temporary DOCX document
+        add_html_to_docx(temp_doc, html_content)
+        temp_doc.save(temp_doc_path)
+
+        # Replace placeholder content in the template
+        template_doc = Document(reference_file_path)
+        template_doc.save(temp_doc_path)
+        template_doc = Document(temp_doc_path)
+        
+        for paragraph in template_doc.paragraphs:
+            if '{{ content }}' in paragraph.text:
+                paragraph.clear()
+                for elem in temp_doc.paragraphs:
+                    new_para = paragraph.insert_paragraph_before(elem.text)
+                    new_para.style = elem.style
 
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
         
         # Save the DOCX document
-        doc.save(output_docx_path)
+        template_doc.save(output_docx_path)
 
         # Read the output DOCX file back into a stream
         with open(output_docx_path, "rb") as output_file:
