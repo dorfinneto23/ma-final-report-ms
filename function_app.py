@@ -63,8 +63,8 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         doc = DocxTemplate(reference_file_path)
 
         # Prepare context for replacing the placeholder
-        context = {'content': txt_content.replace('\n', '\n\n')}  # Ensure new lines are preserved
-
+        context = {'content': txt_content}  # No need for double newline
+        
         # Render text into template
         doc.render(context)
 
