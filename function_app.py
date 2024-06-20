@@ -13,6 +13,7 @@ import csv #helping convert json to csv
 import requests #in order to use translation function 
 import uuid  #in order to use translation function 
 from docx import Document
+import subprocess
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -53,33 +54,36 @@ def convert_txt_to_docx_with_reference(txt_blob_path,caseid):
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
 
-        # Download the reference docx content
+        # Download the reference DOCX content
         reference_stream = download_blob_stream(reference_docx_blob_path)
-        reference_doc = Document(reference_stream)
+        reference_file_path = "/tmp/reference.docx"
+        with open(reference_file_path, "wb") as ref_file:
+            ref_file.write(reference_stream.read())
+
+         # Save the TXT content to a temporary file
+        txt_file_path = "/tmp/input.txt"
+        with open(txt_file_path, "w") as txt_file:
+            txt_file.write(txt_content)
         
-        # Create a new Document object
-        new_doc = Document()
-
-        # Copy styles from reference document to new document
-        if reference_doc.paragraphs:
-            ref_paragraph = reference_doc.paragraphs[0]
-            for paragraph in txt_content.split('\n'):
-                p = new_doc.add_paragraph(paragraph)
-                p.style = ref_paragraph.style
+        # Define the output DOCX file path
+        output_docx_path = f"/tmp/output_{caseid}.docx"
 
 
-        # Save the new document to a stream
-        new_doc_stream = io.BytesIO()
-        new_doc.save(new_doc_stream)
-        new_doc_stream.seek(0)
+        # Run Pandoc to convert TXT to DOCX using the reference DOCX
+        subprocess.run([
+            "pandoc",
+            txt_file_path,
+            "-o", output_docx_path,
+            "--reference-doc", reference_file_path
+        ], check=True)
 
-        # Save the new document to the specified path in Azure Storage
-        doc_file_name =  f"final.docx"
-        #final_blob_path = 'final/new.docx'
-        #final_container_name, final_blob_name = final_blob_path.split('/', 1)
-        #final_blob_client = blob_service_client.get_blob_client(container=final_container_name, blob=final_blob_name)
-        #final_blob_client.upload_blob(new_doc_stream, overwrite=True)
-        docx_path = save_final_files(new_doc_stream,caseid,doc_file_name)
+        # Read the output DOCX file back into a stream
+        with open(output_docx_path, "rb") as output_file:
+            new_doc_stream = io.BytesIO(output_file.read())
+
+        # Save the new DOCX document to Azure Storage
+        doc_file_name = "final.docx"
+        docx_path = save_final_files(new_doc_stream, caseid, doc_file_name)
         logging.info(f"Document saved to {docx_path}")
 
    except Exception as e:
