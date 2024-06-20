@@ -61,15 +61,12 @@ def convert_txt_to_docx_with_reference(txt_blob_path):
         new_doc = Document()
 
         # Copy styles from reference document to new document
-        new_doc.styles = reference_doc.styles
+        if reference_doc.paragraphs:
+            ref_paragraph = reference_doc.paragraphs[0]
+            for paragraph in txt_content.split('\n'):
+                p = new_doc.add_paragraph(paragraph)
+                p.style = ref_paragraph.style
 
-        # Add the content from the txt file to the new document with basic formatting
-        for paragraph in txt_content.split('\n'):
-            p = new_doc.add_paragraph(paragraph)
-            # Applying basic styles from the first paragraph of the reference doc
-            if reference_doc.paragraphs:
-                ref_style = reference_doc.paragraphs[0].style
-                p.style = ref_style
 
         # Save the new document to a stream
         new_doc_stream = io.BytesIO()
