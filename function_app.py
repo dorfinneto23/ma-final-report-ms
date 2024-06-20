@@ -67,35 +67,28 @@ def orgainze_content(finalReport):
 
 ##HTML Elemnets into docx 
 def add_html_to_docx(doc, html_content):
-    soup = BeautifulSoup(html_content, "html.parser")
-
-    for element in soup:
+     soup = BeautifulSoup(html_content, "html.parser")
+     for element in soup:
         if isinstance(element, str):
             doc.add_paragraph(element)
         elif element.name == "p":
             doc.add_paragraph(element.get_text())
         elif element.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             p = doc.add_paragraph(element.get_text())
-            p.style = f'Heading {int(element.name[1])}'
+            p.style = f'Heading{int(element.name[1])}'
         elif element.name == "ul":
             for li in element.find_all("li"):
-                doc.add_paragraph(li.get_text(), style='List Bullet')
+                doc.add_paragraph(li.get_text(), style='ListBullet')
         elif element.name == "ol":
             for li in element.find_all("li"):
-                doc.add_paragraph(li.get_text(), style='List Number')
+                doc.add_paragraph(li.get_text(), style='ListNumber')
         elif element.name == "strong":
             run = doc.add_paragraph().add_run(element.get_text())
             run.bold = True
         elif element.name == "em":
             run = doc.add_paragraph().add_run(element.get_text())
             run.italic = True
-        elif element.name == "a":
-            p = doc.add_paragraph()
-            run = p.add_run(element.get_text())
-            run.underline = True
-            p.add_run(f' ({element["href"]})')
-        elif element.name == "br":
-            doc.add_paragraph()
+        # Handle other HTML elements as needed
 
 
 # Helper function to download blob content to stream 
