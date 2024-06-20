@@ -12,7 +12,8 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # i
 import csv #helping convert json to csv
 import requests #in order to use translation function 
 import uuid  #in order to use translation function 
-from docxtpl import DocxTemplate
+from docxtpl import DocxTemplate, RichText #convert to docx 
+import markdown2 # part of organize the text on the conver txt to docx
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -53,6 +54,10 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
 
+        # Convert Markdown to HTML
+        html_content = markdown2.markdown(txt_content)
+
+
         # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
         reference_file_path = "/tmp/reference.docx"
@@ -63,7 +68,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         doc = DocxTemplate(reference_file_path)
 
         # Prepare context for replacing the placeholder
-        context = {'content': txt_content}  # No need for double newline
+        context = {'content': RichText(html_content, parse_xml=True)}  # No need for double newline
         
         # Render text into template
         doc.render(context)
