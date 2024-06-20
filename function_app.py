@@ -12,9 +12,7 @@ from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # i
 import csv #helping convert json to csv
 import requests #in order to use translation function 
 import uuid  #in order to use translation function 
-from docx import Document
-import subprocess
-import pypandoc
+from docxtpl import DocxTemplate
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -47,36 +45,32 @@ def download_blob_stream(path):
         stream.seek(0)
         return stream
 
-def convert_txt_to_docx_with_reference(txt_blob_path,caseid):
-   try:
-        #reference docx file  
+def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
+    try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
+        
         # Download the txt file content
         txt_stream = download_blob_stream(txt_blob_path)
         txt_content = txt_stream.getvalue().decode('utf-8')
 
-        # Download the reference DOCX content
+        # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
         reference_file_path = "/tmp/reference.docx"
         with open(reference_file_path, "wb") as ref_file:
             ref_file.write(reference_stream.read())
 
-         # Save the TXT content to a temporary file
-        txt_file_path = "/tmp/input.txt"
-        with open(txt_file_path, "w") as txt_file:
-            txt_file.write(txt_content)
-        
+        # Load the DOCX template
+        doc = DocxTemplate(reference_file_path)
+
+        # Render text into template (you can add specific placeholders if needed)
+        context = {'content': txt_content}
+        doc.render(context)
+
         # Define the output DOCX file path
         output_docx_path = f"/tmp/output_{caseid}.docx"
-
-
-        # Run Pandoc to convert TXT to DOCX using the reference DOCX
-        subprocess.run([
-            "pandoc",
-            txt_file_path,
-            "-o", output_docx_path,
-            "--reference-doc", reference_file_path
-        ], check=True)
+        
+        # Save the DOCX document
+        doc.save(output_docx_path)
 
         # Read the output DOCX file back into a stream
         with open(output_docx_path, "rb") as output_file:
@@ -87,9 +81,8 @@ def convert_txt_to_docx_with_reference(txt_blob_path,caseid):
         docx_path = save_final_files(new_doc_stream, caseid, doc_file_name)
         logging.info(f"Document saved to {docx_path}")
 
-   except Exception as e:
-        logging.error(f"An error occurred:, {str(e)}")
-
+    except Exception as e:
+        logging.error(f"An error occurred: {str(e)}")
 
 
 
