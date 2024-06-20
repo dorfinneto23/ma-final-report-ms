@@ -62,8 +62,10 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         # Load the DOCX template
         doc = DocxTemplate(reference_file_path)
 
-        # Render text into template (you can add specific placeholders if needed)
-        context = {'content': txt_content}
+        # Prepare context for replacing the placeholder
+        context = {'content': txt_content.replace('\n', '\n\n')}  # Ensure new lines are preserved
+
+        # Render text into template
         doc.render(context)
 
         # Define the output DOCX file path
