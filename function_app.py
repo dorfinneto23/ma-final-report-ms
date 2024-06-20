@@ -70,7 +70,6 @@ def add_html_to_docx(doc, html_content):
     soup = BeautifulSoup(html_content, "html.parser")
 
     def add_text_to_paragraph(paragraph, element):
-        """Add text or inline formatting to a paragraph."""
         for child in element.children:
             if isinstance(child, str):
                 paragraph.add_run(child)
