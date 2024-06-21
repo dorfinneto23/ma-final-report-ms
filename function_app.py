@@ -84,6 +84,45 @@ def download_blob_stream(path):
         return stream
 
 
+def parse_html_to_docx(soup, doc):
+    """
+    Parse the HTML content and add it to the DOCX document.
+    """
+    # Add title if exists
+    if soup.title:
+        doc.add_heading(soup.title.string, 0)
+    
+    # Handle different HTML tags
+    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol']):
+        if element.name.startswith('h'):
+            # Add headings
+            level = int(element.name[1])  # Get the level from h1, h2, etc.
+            doc.add_heading(element.get_text(), level)
+        elif element.name == 'p':
+            # Add paragraphs
+            doc.add_paragraph(element.get_text())
+        elif element.name == 'li':
+            # Add list items
+            add_list_item(doc, element)
+        elif element.name == 'ol':
+            # Handle ordered lists by adding a numbered list
+            add_numbered_list(doc, element)
+
+def add_list_item(doc, element):
+    """
+    Add list item to the document.
+    """
+    paragraph = doc.add_paragraph(style='List Bullet')
+    paragraph.add_run(element.get_text())
+
+def add_numbered_list(doc, ol_element):
+    """
+    Add a numbered list to the document.
+    """
+    for li in ol_element.find_all('li'):
+        paragraph = doc.add_paragraph(style='List Number')
+        paragraph.add_run(li.get_text())
+
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
@@ -106,24 +145,19 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         for tag in soup.find_all():
             tag['dir'] = 'rtl'
         html_content_rtl = str(soup)
+
+        # Debug: Print adjusted HTML content
+        logging.debug(f"RTL adjusted HTML content: {html_content_rtl}")
         
         # Save HTML content to a file
         html_file_name = "final_html.txt"
         save_final_files(html_content_rtl, caseid, html_file_name)
         
         doc = Document()
-        
-        # Add title to DOCX
-        title = soup.title.string if soup.title else 'Document'
-        doc.add_heading(title, 0)
 
-        # Add paragraphs
-        paragraphs = soup.find_all('p')
-        if not paragraphs:
-            logging.warning("No paragraphs found in the HTML content.")
+        # Add content to DOCX
+        parse_html_to_docx(soup, doc)
         
-        for paragraph in paragraphs:
-            doc.add_paragraph(paragraph.get_text())
 
         # Save the new DOCX document to a stream
         new_doc_stream = io.BytesIO()
