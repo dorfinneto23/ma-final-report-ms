@@ -80,16 +80,28 @@ def download_blob_stream(path):
         blob_client.download_blob().download_to_stream(stream)
         stream.seek(0)
         return stream
+
+
+def set_rtl_paragraph(paragraph):
+    #"""Set right-to-left (RTL) alignment for the paragraph."""
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+    bidi = OxmlElement('w:bidi')
+    bidi.set(qn('w:val'), '1')
+    pPr.append(bidi)
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+
 # Replace placeholder with content in the DOCX document.
 def replace_placeholder_with_content(doc, placeholder, html_content):
+    #"""Replace placeholder with content in the DOCX document."""
+    soup = BeautifulSoup(html_content, "html.parser")
     for paragraph in doc.paragraphs:
         if placeholder in paragraph.text:
-            paragraph.clear()  # Clear existing content
-            # Parse HTML content
-            soup = BeautifulSoup(html_content, "html.parser")
+            paragraph.clear()
             for element in soup.descendants:
-                if element.name is None:  # It's a NavigableString
-                    run = paragraph.add_run(element.strip())
+                if element.name is None:
+                    paragraph.add_run(element.strip())
                 elif element.name == 'strong':
                     run = paragraph.add_run(element.text)
                     run.bold = True
@@ -99,18 +111,17 @@ def replace_placeholder_with_content(doc, placeholder, html_content):
                 elif element.name == 'h1':
                     run = paragraph.add_run(element.text)
                     run.font.size = Pt(24)
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    set_rtl_paragraph(paragraph)
                 elif element.name == 'h2':
                     run = paragraph.add_run(element.text)
                     run.font.size = Pt(18)
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+                    set_rtl_paragraph(paragraph)
                 elif element.name == 'p':
-                    run = paragraph.add_run(element.text)
+                    paragraph.add_run(element.text)
                 elif element.name == 'br':
                     paragraph.add_run().add_break()
-            paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+            set_rtl_paragraph(paragraph)
             return
-
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
