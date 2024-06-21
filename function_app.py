@@ -92,9 +92,15 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         markdown_txt_stream = download_blob_stream(txt_blob_path)
         markdown_txt_content = markdown_txt_stream.getvalue().decode('utf-8')
 
+        # Debug: Print markdown content
+        logging.info(f"Markdown content: {markdown_txt_content}")
+
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
         soup = BeautifulSoup(html_content, "html.parser")
+
+        #Debug: Print HTML content
+        logging.info(f"HTML content: {html_content}")
         
         # Adjust HTML for RTL
         for tag in soup.find_all():
