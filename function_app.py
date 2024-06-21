@@ -84,29 +84,31 @@ def download_blob_stream(path):
 def replace_placeholder_with_content(doc, placeholder, html_content):
     for paragraph in doc.paragraphs:
         if placeholder in paragraph.text:
-            # Clear the paragraph
-            paragraph.clear()
+            paragraph.clear()  # Clear existing content
             # Parse HTML content
             soup = BeautifulSoup(html_content, "html.parser")
             for element in soup.descendants:
                 if element.name is None:  # It's a NavigableString
-                    paragraph.add_run(element.strip())
+                    run = paragraph.add_run(element.strip())
                 elif element.name == 'strong':
-                    paragraph.add_run(element.text).bold = True
+                    run = paragraph.add_run(element.text)
+                    run.bold = True
                 elif element.name == 'em':
-                    paragraph.add_run(element.text).italic = True
+                    run = paragraph.add_run(element.text)
+                    run.italic = True
                 elif element.name == 'h1':
                     run = paragraph.add_run(element.text)
                     run.font.size = Pt(24)
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                 elif element.name == 'h2':
                     run = paragraph.add_run(element.text)
                     run.font.size = Pt(18)
-                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
                 elif element.name == 'p':
-                    paragraph.add_run(element.text)
+                    run = paragraph.add_run(element.text)
                 elif element.name == 'br':
                     paragraph.add_run().add_break()
+            paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
             return
 
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
