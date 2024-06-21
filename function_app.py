@@ -16,7 +16,9 @@ from bs4 import BeautifulSoup
 from docx import Document
 import markdown
 from docx.shared import Pt
+from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.oxml import OxmlElement
 import tempfile
 
 
