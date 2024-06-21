@@ -10,6 +10,7 @@ from openai import AzureOpenAI #for using openai services
 from azure.data.tables import TableServiceClient, TableClient, UpdateMode # in order to use azure storage table  
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # in order to use azure storage table  exceptions 
 import requests #in order to use translation function 
+import uuid  #in order to use translation function 
 from markdown2 import markdown # part of organize the text on the conver txt to docx
 from bs4 import BeautifulSoup
 from docx import Document
