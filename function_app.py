@@ -9,14 +9,15 @@ from azure.servicebus import ServiceBusClient, ServiceBusMessage # in order to u
 from openai import AzureOpenAI #for using openai services 
 from azure.data.tables import TableServiceClient, TableClient, UpdateMode # in order to use azure storage table  
 from azure.core.exceptions import ResourceExistsError, ResourceNotFoundError # in order to use azure storage table  exceptions 
-import csv #helping convert json to csv
 import requests #in order to use translation function 
-import uuid  #in order to use translation function 
-from docxtpl import DocxTemplate, RichText #convert to docx 
 from markdown2 import markdown # part of organize the text on the conver txt to docx
 from bs4 import BeautifulSoup
 from docx import Document
 import markdown
+from docx.shared import Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+import tempfile
+
 
 # Azure Blob Storage connection string
 connection_string_blob = os.environ.get('BlobStorageConnString')
@@ -78,6 +79,34 @@ def download_blob_stream(path):
         blob_client.download_blob().download_to_stream(stream)
         stream.seek(0)
         return stream
+# Replace placeholder with content in the DOCX document.
+def replace_placeholder_with_content(doc, placeholder, html_content):
+    for paragraph in doc.paragraphs:
+        if placeholder in paragraph.text:
+            # Clear the paragraph
+            paragraph.clear()
+            # Parse HTML content
+            soup = BeautifulSoup(html_content, "html.parser")
+            for element in soup.descendants:
+                if element.name is None:  # It's a NavigableString
+                    paragraph.add_run(element.strip())
+                elif element.name == 'strong':
+                    paragraph.add_run(element.text).bold = True
+                elif element.name == 'em':
+                    paragraph.add_run(element.text).italic = True
+                elif element.name == 'h1':
+                    run = paragraph.add_run(element.text)
+                    run.font.size = Pt(24)
+                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                elif element.name == 'h2':
+                    run = paragraph.add_run(element.text)
+                    run.font.size = Pt(18)
+                    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                elif element.name == 'p':
+                    paragraph.add_run(element.text)
+                elif element.name == 'br':
+                    paragraph.add_run().add_break()
+            return
 
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
@@ -89,9 +118,9 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Download the reference DOCX template
         reference_stream = download_blob_stream(reference_docx_blob_path)
-        reference_file_path = "/tmp/reference.docx"
-        with open(reference_file_path, "wb") as ref_file:
-            ref_file.write(reference_stream.read())
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_template:
+            tmp_template.write(reference_stream.read())
+            reference_file_path = tmp_template.name
 
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
@@ -99,17 +128,13 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         # Load DOCX template
         doc = Document(reference_file_path)
 
-        # Append HTML content to DOCX
-        for line in html_content.splitlines():
-            if line.strip():
-                p = doc.add_paragraph()
-                p.add_run(line)
+        # Replace the placeholder with converted HTML content
+        replace_placeholder_with_content(doc, '{{ content }}', html_content)
 
         # Define the output DOCX file path
-        output_docx_path = f"/tmp/output_{caseid}.docx"
-        
-        # Save the DOCX document
-        doc.save(output_docx_path)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_output:
+            output_docx_path = tmp_output.name
+            doc.save(output_docx_path)
 
         # Read the output DOCX file back into a stream
         with open(output_docx_path, "rb") as output_file:
