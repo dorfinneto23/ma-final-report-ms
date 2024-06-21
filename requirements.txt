@@ -13,3 +13,5 @@ docxtpl
 markdown2 
 python-docx
 beautifulsoup4 
+pypandoc
+markdown
