@@ -140,7 +140,8 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
-
+        html_file_name = "final_html.txt"
+        save_final_files(html_content, caseid, html_file_name)
         # Load DOCX template
         doc = Document(reference_file_path)
 
