@@ -112,13 +112,12 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         doc.add_heading(title, 0)
 
         # Add paragraphs
-        for paragraph in soup.find_all('p'):
+        paragraphs = soup.find_all('p')
+        if not paragraphs:
+            logging.warning("No paragraphs found in the HTML content.")
+        
+        for paragraph in paragraphs:
             doc.add_paragraph(paragraph.get_text())
-
-        # Add hyperlinks
-        for link in soup.find_all('a', href=True):
-            p = doc.add_paragraph()
-            p.add_run(f'{link.get_text()} - {link["href"]}')
 
         # Save the new DOCX document to a stream
         new_doc_stream = io.BytesIO()
