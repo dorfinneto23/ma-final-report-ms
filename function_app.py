@@ -140,13 +140,17 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
+        soup = BeautifulSoup(html_content, "html.parser")
+        for tag in soup.find_all():
+            tag['dir'] = 'rtl'
+        html_content_rtl = str(soup)
         html_file_name = "final_html.txt"
-        save_final_files(html_content, caseid, html_file_name)
+        save_final_files(html_content_rtl, caseid, html_file_name)
         # Load DOCX template
         doc = Document(reference_file_path)
 
         # Replace the placeholder with converted HTML content
-        replace_placeholder_with_content(doc, '{{ content }}', html_content)
+        replace_placeholder_with_content(doc, '{{ content }}', html_content_rtl)
 
         # Define the output DOCX file path
         with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_output:
