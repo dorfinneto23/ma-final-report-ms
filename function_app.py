@@ -84,46 +84,6 @@ def download_blob_stream(path):
         return stream
 
 
-def set_rtl_paragraph(paragraph):
-    #"""Set right-to-left (RTL) alignment for the paragraph."""
-    p = paragraph._element
-    pPr = p.get_or_add_pPr()
-    bidi = OxmlElement('w:bidi')
-    bidi.set(qn('w:val'), '1')
-    pPr.append(bidi)
-    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-
-
-# Replace placeholder with content in the DOCX document.
-def replace_placeholder_with_content(doc, placeholder, html_content):
-    #"""Replace placeholder with content in the DOCX document."""
-    soup = BeautifulSoup(html_content, "html.parser")
-    for paragraph in doc.paragraphs:
-        if placeholder in paragraph.text:
-            paragraph.clear()
-            for element in soup.descendants:
-                if element.name is None:
-                    paragraph.add_run(element.strip())
-                elif element.name == 'strong':
-                    run = paragraph.add_run(element.text)
-                    run.bold = True
-                elif element.name == 'em':
-                    run = paragraph.add_run(element.text)
-                    run.italic = True
-                elif element.name == 'h1':
-                    run = paragraph.add_run(element.text)
-                    run.font.size = Pt(24)
-                    set_rtl_paragraph(paragraph)
-                elif element.name == 'h2':
-                    run = paragraph.add_run(element.text)
-                    run.font.size = Pt(18)
-                    set_rtl_paragraph(paragraph)
-                elif element.name == 'p':
-                    paragraph.add_run(element.text)
-                elif element.name == 'br':
-                    paragraph.add_run().add_break()
-            set_rtl_paragraph(paragraph)
-            return
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
@@ -132,34 +92,38 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         markdown_txt_stream = download_blob_stream(txt_blob_path)
         markdown_txt_content = markdown_txt_stream.getvalue().decode('utf-8')
 
-        # Download the reference DOCX template
-        reference_stream = download_blob_stream(reference_docx_blob_path)
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_template:
-            tmp_template.write(reference_stream.read())
-            reference_file_path = tmp_template.name
-
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
         soup = BeautifulSoup(html_content, "html.parser")
+        
+        # Adjust HTML for RTL
         for tag in soup.find_all():
             tag['dir'] = 'rtl'
         html_content_rtl = str(soup)
+        
+        # Save HTML content to a file
         html_file_name = "final_html.txt"
         save_final_files(html_content_rtl, caseid, html_file_name)
-        # Load DOCX template
-        doc = Document(reference_file_path)
+        
+        doc = Document()
+        
+        # Add title to DOCX
+        title = soup.title.string if soup.title else 'Document'
+        doc.add_heading(title, 0)
 
-        # Replace the placeholder with converted HTML content
-        replace_placeholder_with_content(doc, '{{ content }}', html_content_rtl)
+        # Add paragraphs
+        for paragraph in soup.find_all('p'):
+            doc.add_paragraph(paragraph.get_text())
 
-        # Define the output DOCX file path
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.docx') as tmp_output:
-            output_docx_path = tmp_output.name
-            doc.save(output_docx_path)
+        # Add hyperlinks
+        for link in soup.find_all('a', href=True):
+            p = doc.add_paragraph()
+            p.add_run(f'{link.get_text()} - {link["href"]}')
 
-        # Read the output DOCX file back into a stream
-        with open(output_docx_path, "rb") as output_file:
-            new_doc_stream = io.BytesIO(output_file.read())
+        # Save the new DOCX document to a stream
+        new_doc_stream = io.BytesIO()
+        doc.save(new_doc_stream)
+        new_doc_stream.seek(0)
 
         # Save the new DOCX document to Azure Storage
         doc_file_name = "final.docx"
