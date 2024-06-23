@@ -84,26 +84,43 @@ def download_blob_stream(path):
         return stream
 
 
+def set_docx_rtl(doc):
+    """
+    Set the document direction to RTL.
+    """
+    sectPr = doc.sections[0]._element.get_or_add_sectPr()
+    bidi = OxmlElement('w:bidi')
+    sectPr.append(bidi)
+
+
+def set_paragraph_rtl(paragraph):
+    """
+    Set a paragraph's direction to RTL.
+    """
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+    bidi = OxmlElement('w:bidi')
+    pPr.append(bidi)
+
+
 def parse_html_to_docx(soup, doc):
     """
     Parse the HTML content and add it to the DOCX document.
     """
-    # Add title if exists
-    if soup.title:
-        doc.add_heading(soup.title.string, 0)
-    
-    # Handle different HTML tags
     for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol']):
         if element.name.startswith('h'):
             # Add headings
             level = int(element.name[1])  # Get the level from h1, h2, etc.
-            doc.add_heading(element.get_text(), level)
+            heading = doc.add_heading(element.get_text(), level)
+            set_paragraph_rtl(heading)
         elif element.name == 'p':
             # Add paragraphs
-            doc.add_paragraph(element.get_text())
+            paragraph = doc.add_paragraph(element.get_text())
+            set_paragraph_rtl(paragraph)
         elif element.name == 'li':
             # Add list items
-            add_list_item(doc, element)
+            list_item = add_list_item(doc, element)
+            set_paragraph_rtl(list_item)
         elif element.name == 'ol':
             # Handle ordered lists by adding a numbered list
             add_numbered_list(doc, element)
@@ -136,10 +153,12 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Convert Markdown content to HTML
         html_content = markdown.markdown(markdown_txt_content)
-        soup = BeautifulSoup(html_content, "html.parser")
 
         #Debug: Print HTML content
         logging.info(f"HTML content: {html_content}")
+
+        # Parse HTML content
+        soup = BeautifulSoup(html_content, "html.parser")
         
         # Adjust HTML for RTL
         for tag in soup.find_all():
@@ -154,6 +173,9 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         save_final_files(html_content_rtl, caseid, html_file_name)
         
         doc = Document()
+
+        # Set document direction to RTL
+        set_docx_rtl(doc)
 
         # Add content to DOCX
         parse_html_to_docx(soup, doc)
