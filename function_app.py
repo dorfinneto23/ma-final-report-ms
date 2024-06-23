@@ -70,6 +70,7 @@ def orgainze_content(finalReport):
     except Exception as e:
         return f"{str(e)}"  
 
+#-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 
 # Helper function to download blob content to stream 
 def download_blob_stream(path):
@@ -106,7 +107,7 @@ def set_paragraph_rtl(paragraph):
 
 def parse_html_to_docx(soup, doc):
 
-    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol']):
+    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol', 'ul']):
         if element.name.startswith('h'):
             # Process headings
             add_heading(doc, element)
@@ -114,13 +115,17 @@ def parse_html_to_docx(soup, doc):
             # Process paragraphs
             add_paragraph(doc, element)
         elif element.name == 'li':
-            # Process list items within ordered lists
-            # Only add list items if they are not already within 'ol'
-            if not element.find_parent('ol'):
-                add_list_item(doc, element)
+            # Handle list items within ordered and unordered lists
+            if element.find_parent('ol'):
+                add_list_item(doc, element, list_type='number')
+            elif element.find_parent('ul'):
+                add_list_item(doc, element, list_type='bullet')
         elif element.name == 'ol':
             # Process ordered lists
             add_numbered_list(doc, element)
+        elif element.name == 'ul':
+            # Process unordered lists
+            add_bulleted_list(doc, element)
 
 def add_heading(doc, element):
     """
@@ -226,6 +231,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
         logging.error(f"An error occurred: {str(e)}")
 
 
+#-------------------------------------------------------Markdown to DOCX END ----------------------------------------
 
 #Translate content given language 
 def translate_text(text, to_language='he'):
