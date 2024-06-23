@@ -96,11 +96,12 @@ def set_paragraph_rtl(paragraph):
     """
     Set a paragraph's direction to RTL.
     """
-    p = paragraph._element
-    pPr = p.get_or_add_pPr()
-    bidi = OxmlElement('w:bidi')
-    bidi.set(qn('w:val'), "1")
-    pPr.append(bidi)
+    if paragraph is not None:
+        p = paragraph._element
+        pPr = p.get_or_add_pPr()
+        bidi = OxmlElement('w:bidi')
+        bidi.set(qn('w:val'), "1")
+        pPr.append(bidi)
 
 
 def parse_html_to_docx(soup, doc):
@@ -267,7 +268,7 @@ def get_content(path):
         return None    
     
 
-#main function to create and manage all final files 
+#main function to create and manage all final filtered asistance response files 
 def union_clinic_areas(table_name, caseid):
     # Create a TableServiceClient object using the connection string
     service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
@@ -298,7 +299,35 @@ def union_clinic_areas(table_name, caseid):
     #convert heb txt file to docx 
     convert_txt_to_docx_with_reference(heb_file_path,caseid)
     
-   
+  #main function to create and manage all final filtered asistance response files 
+def union_clinic_areas_disabilities_zero(table_name, caseid):
+    # Create a TableServiceClient object using the connection string
+    service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
+    
+    # Get the table client
+    table_client = service_client.get_table_client(table_name=table_name)
+    
+
+    # Query the table for entities with the given PartitionKey
+    entities = table_client.query_entities(f"PartitionKey eq '{caseid}'")
+
+    # union assistantResponsefiltered into one file for each entity
+    combined_content = ""
+    union_file_name = f"final-{caseid}.txt"
+    for entity in entities:
+        clinic_area = entity['RowKey']
+        content_path = entity['assistantResponseNoDisabilities']
+        filecontent = get_content(content_path)
+        combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
+    #save union content of all clinic areas         
+    save_final_files(combined_content,caseid,union_file_name)
+    text_heb = translate_text(combined_content)
+    heb_file_name = f"final-{caseid}-heb-no-disabilities.txt"
+    #save heb file
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name)
+    logging.info(f"union_clinic_areas: combined_content done")
+
+     
 
 app = func.FunctionApp()
 
@@ -309,6 +338,9 @@ def finalReportMs(azservicebus: func.ServiceBusMessage):
     logging.info(f"Received messageesds: {message_data}")
     message_data_dict = json.loads(message_data)
     caseid = message_data_dict['caseid']
+    #preparing final files where disabilities is not 0%
     union_clinic_areas_path = union_clinic_areas("contentByClinicAreas",caseid)
     logging.info(f"union_clinic_areas path: {union_clinic_areas_path}")
+    #preparing final files where disabilities is  0%
+    union_clinic_areas_path_disabilities_zero = union_clinic_areas_disabilities_zero("contentByClinicAreas",caseid)
    
