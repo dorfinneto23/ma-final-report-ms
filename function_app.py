@@ -88,8 +88,9 @@ def set_docx_rtl(doc):
     """
     Set the document direction to RTL.
     """
-    sectPr = doc.sections[0]._element.get_or_add_sectPr()
+    sectPr = doc.sections[0].element
     bidi = OxmlElement('w:bidi')
+    bidi.set(qn('w:val'), "1")
     sectPr.append(bidi)
 
 
@@ -100,6 +101,7 @@ def set_paragraph_rtl(paragraph):
     p = paragraph._element
     pPr = p.get_or_add_pPr()
     bidi = OxmlElement('w:bidi')
+    bidi.set(qn('w:val'), "1")
     pPr.append(bidi)
 
 
