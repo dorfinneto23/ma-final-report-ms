@@ -291,7 +291,7 @@ def union_clinic_areas(table_name, caseid):
         clinic_area = entity['RowKey']
         content_path = entity['assistantResponsefiltered']
         filecontent = get_content(content_path)
-        if filecontent!="no disabilities found.":
+        if filecontent!="":
             combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
     save_final_files(combined_content,caseid,union_file_name,destination_folder)
@@ -319,7 +319,7 @@ def union_clinic_areas_disabilities_zero(table_name, caseid):
 
     # union assistantResponsefiltered into one file for each entity
     combined_content = ""
-    union_file_name = f"final-{caseid}.txt"
+    union_file_name = f"final-{caseid}-no-disabilities.txt"
     for entity in entities:
         clinic_area = entity['RowKey']
         content_path = entity['assistantResponseNoDisabilities']
