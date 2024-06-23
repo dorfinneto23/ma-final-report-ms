@@ -132,6 +132,7 @@ def add_list_item(doc, element):
     """
     paragraph = doc.add_paragraph(style='List Bullet')
     paragraph.add_run(element.get_text())
+    set_paragraph_rtl(paragraph)  # Set RTL for the list item
 
 def add_numbered_list(doc, ol_element):
     """
@@ -140,6 +141,7 @@ def add_numbered_list(doc, ol_element):
     for li in ol_element.find_all('li'):
         paragraph = doc.add_paragraph(style='List Number')
         paragraph.add_run(li.get_text())
+        set_paragraph_rtl(paragraph)  # Set RTL for the numbered list item
 
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
     try:
@@ -232,7 +234,7 @@ def translate_text(text, to_language='he'):
         logging.error(f"An error occurred:, {str(e)}")
 
 #save files in "final" folder
-def save_final_files(content,caseid,filename):
+def save_final_files(content,caseid,filename,file_folder):
     try:
         logging.info(f"save_ContentByClinicAreas start, content: {content},caseid: {caseid},filename: {filename}")
         container_name = "medicalanalysis"
@@ -241,7 +243,7 @@ def save_final_files(content,caseid,filename):
         blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
         container_client = blob_service_client.get_container_client(container_name)
         basicPath = f"{main_folder_name}/{folder_name}"
-        destinationPath = f"{basicPath}/final/{filename}"
+        destinationPath = f"{basicPath}/final/{file_folder}/{filename}"
         # Upload the blob and overwrite if it already exists
         blob_client = container_client.upload_blob(name=destinationPath, data=content, overwrite=True)
         logging.info(f"the ContentByClinicAreas content file url is: {blob_client.url}")
@@ -290,11 +292,11 @@ def union_clinic_areas(table_name, caseid):
         if filecontent!="no disabilities found.":
             combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
-    save_final_files(combined_content,caseid,union_file_name)
+    save_final_files(combined_content,caseid,union_file_name,"filtered")
     text_heb = translate_text(combined_content)
     heb_file_name = f"final-{caseid}-heb.txt"
     #save heb file
-    heb_file_path = save_final_files(text_heb,caseid,heb_file_name)
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,"filtered")
     logging.info(f"union_clinic_areas: combined_content done")
     #convert heb txt file to docx 
     convert_txt_to_docx_with_reference(heb_file_path,caseid)
@@ -320,11 +322,11 @@ def union_clinic_areas_disabilities_zero(table_name, caseid):
         filecontent = get_content(content_path)
         combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
-    save_final_files(combined_content,caseid,union_file_name)
+    save_final_files(combined_content,caseid,union_file_name,"disabilities_zero")
     text_heb = translate_text(combined_content)
     heb_file_name = f"final-{caseid}-heb-no-disabilities.txt"
     #save heb file
-    heb_file_path = save_final_files(text_heb,caseid,heb_file_name)
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,"disabilities_zero")
     logging.info(f"union_clinic_areas: combined_content done")
 
      
