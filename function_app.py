@@ -143,7 +143,7 @@ def add_numbered_list(doc, ol_element):
         paragraph.add_run(li.get_text())
         set_paragraph_rtl(paragraph)  # Set RTL for the numbered list item
 
-def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
+def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
 
@@ -173,7 +173,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
         
         # Save HTML content to a file
         html_file_name = "final_html.txt"
-        save_final_files(html_content_rtl, caseid, html_file_name)
+        save_final_files(html_content_rtl, caseid, html_file_name,destination_folder)
         
         doc = Document()
 
@@ -191,7 +191,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid):
 
         # Save the new DOCX document to Azure Storage
         doc_file_name = "final.docx"
-        docx_path = save_final_files(new_doc_stream, caseid, doc_file_name)
+        docx_path = save_final_files(new_doc_stream, caseid, doc_file_name,destination_folder)
         logging.info(f"Document saved to {docx_path}")
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
@@ -272,6 +272,8 @@ def get_content(path):
 
 #main function to create and manage all final filtered asistance response files 
 def union_clinic_areas(table_name, caseid):
+
+    destination_folder = "filtered"
     # Create a TableServiceClient object using the connection string
     service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
     
@@ -292,17 +294,19 @@ def union_clinic_areas(table_name, caseid):
         if filecontent!="no disabilities found.":
             combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
-    save_final_files(combined_content,caseid,union_file_name,"filtered")
+    save_final_files(combined_content,caseid,union_file_name,destination_folder)
     text_heb = translate_text(combined_content)
     heb_file_name = f"final-{caseid}-heb.txt"
     #save heb file
-    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,"filtered")
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,destination_folder)
     logging.info(f"union_clinic_areas: combined_content done")
     #convert heb txt file to docx 
-    convert_txt_to_docx_with_reference(heb_file_path,caseid)
+    convert_txt_to_docx_with_reference(heb_file_path,caseid,destination_folder)
     
   #main function to create and manage all final filtered asistance response files 
 def union_clinic_areas_disabilities_zero(table_name, caseid):
+
+    destination_folder = "disabilities_zero"
     # Create a TableServiceClient object using the connection string
     service_client = TableServiceClient.from_connection_string(conn_str=connection_string_blob)
     
@@ -322,11 +326,11 @@ def union_clinic_areas_disabilities_zero(table_name, caseid):
         filecontent = get_content(content_path)
         combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
     #save union content of all clinic areas         
-    save_final_files(combined_content,caseid,union_file_name,"disabilities_zero")
+    save_final_files(combined_content,caseid,union_file_name,destination_folder)
     text_heb = translate_text(combined_content)
     heb_file_name = f"final-{caseid}-heb-no-disabilities.txt"
     #save heb file
-    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,"disabilities_zero")
+    heb_file_path = save_final_files(text_heb,caseid,heb_file_name,destination_folder)
     logging.info(f"union_clinic_areas: combined_content done")
 
      
