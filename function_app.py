@@ -137,22 +137,40 @@ def add_paragraph(doc, element):
     paragraph = doc.add_paragraph(element.get_text())
     set_paragraph_rtl(paragraph)
 
-def add_list_item(doc, element):
+def add_list_item(doc, element, list_type='bullet'):
     """
-    Add list item to the document.
+    Add a list item to the document.
     """
-    paragraph = doc.add_paragraph(style='List Bullet')
+    if list_type == 'number':
+        paragraph = doc.add_paragraph(style='List Number')
+    else:
+        paragraph = doc.add_paragraph(style='List Bullet')
     paragraph.add_run(element.get_text())
-    set_paragraph_rtl(paragraph)  # Set RTL for the list item
+    set_paragraph_rtl(paragraph)
 
-def add_numbered_list(doc, ol_element):
+def add_numbered_list(doc, ol_element, level=0):
     """
     Add a numbered list to the document.
     """
-    for li in ol_element.find_all('li'):
-        paragraph = doc.add_paragraph(style='List Number')
-        paragraph.add_run(li.get_text())
-        set_paragraph_rtl(paragraph)  # Set RTL for the numbered list item
+    for li in ol_element.find_all('li', recursive=False):
+        add_list_item(doc, li, list_type='number')
+        # Check for nested lists within this list item
+        for nested_ol in li.find_all('ol', recursive=False):
+            add_numbered_list(doc, nested_ol, level + 1)
+        for nested_ul in li.find_all('ul', recursive=False):
+            add_bulleted_list(doc, nested_ul, level + 1)
+
+def add_bulleted_list(doc, ul_element, level=0):
+    """
+    Add a bulleted list to the document.
+    """
+    for li in ul_element.find_all('li', recursive=False):
+        add_list_item(doc, li, list_type='bullet')
+        # Check for nested lists within this list item
+        for nested_ol in li.find_all('ol', recursive=False):
+            add_numbered_list(doc, nested_ol, level + 1)
+        for nested_ul in li.find_all('ul', recursive=False):
+            add_bulleted_list(doc, nested_ul, level + 1)
 
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
     try:
