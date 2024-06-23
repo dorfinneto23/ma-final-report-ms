@@ -86,12 +86,10 @@ def download_blob_stream(path):
 
 def set_docx_rtl(doc):
     """
-    Set the document direction to RTL.
+    Set the document direction to RTL by setting RTL for each paragraph.
     """
-    sectPr = doc.sections[0].element
-    bidi = OxmlElement('w:bidi')
-    bidi.set(qn('w:val'), "1")
-    sectPr.append(bidi)
+    for paragraph in doc.paragraphs:
+        set_paragraph_rtl(paragraph)
 
 
 def set_paragraph_rtl(paragraph):
