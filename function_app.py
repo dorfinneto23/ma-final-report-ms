@@ -177,6 +177,25 @@ def add_bulleted_list(doc, ul_element, level=0):
         for nested_ul in li.find_all('ul', recursive=False):
             add_bulleted_list(doc, nested_ul, level + 1)
 
+
+def reformat_lists(soup):
+    # Iterate over ordered lists
+    for ol in soup.find_all('ol'):
+        items = ol.find_all('li', recursive=False)
+        for item in items:
+            nested_ul = item.find('ul')
+            if nested_ul:
+                item.insert_after(nested_ul)
+                item.insert_after(soup.new_tag('br'))
+                nested_ul.wrap(item)
+
+            # Replace inline <h1> with new <li> inside the previous <li>
+            inline_heading = item.find_next('h1', recursive=False)
+            if inline_heading:
+                new_li = soup.new_tag('li')
+                new_li.append(inline_heading.extract())
+                item.append(new_li)
+
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
@@ -200,6 +219,14 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
         # Adjust HTML for RTL
         for tag in soup.find_all():
             tag['dir'] = 'rtl'
+
+         # Add IDs to headings and nest lists within list items
+        for tag in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
+            tag['id'] = tag.get_text().replace(' ', '_').lower()
+        
+        # Reformat lists
+        reformat_lists(soup)
+
         html_content_rtl = str(soup)
 
         # Debug: Print adjusted HTML content
