@@ -115,11 +115,7 @@ def parse_html_to_docx(soup, doc):
             # Process paragraphs
             add_paragraph(doc, element)
         elif element.name == 'li':
-            # Handle list items within ordered and unordered lists
-            if element.find_parent('ol'):
-                add_list_item(doc, element, list_type='number')
-            elif element.find_parent('ul'):
-                add_list_item(doc, element, list_type='bullet')
+                add_list_item(doc, element, list_type='Bullet')
         elif element.name == 'ol':
             # Process ordered lists
             add_numbered_list(doc, element)
