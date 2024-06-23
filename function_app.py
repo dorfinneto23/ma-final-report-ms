@@ -105,26 +105,37 @@ def set_paragraph_rtl(paragraph):
 
 
 def parse_html_to_docx(soup, doc):
-    """
-    Parse the HTML content and add it to the DOCX document.
-    """
+
     for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol']):
         if element.name.startswith('h'):
-            # Add headings
-            level = int(element.name[1])  # Get the level from h1, h2, etc.
-            heading = doc.add_heading(element.get_text(), level)
-            set_paragraph_rtl(heading)
+            # Process headings
+            add_heading(doc, element)
         elif element.name == 'p':
-            # Add paragraphs
-            paragraph = doc.add_paragraph(element.get_text())
-            set_paragraph_rtl(paragraph)
+            # Process paragraphs
+            add_paragraph(doc, element)
         elif element.name == 'li':
-            # Add list items
-            list_item = add_list_item(doc, element)
-            set_paragraph_rtl(list_item)
+            # Process list items within ordered lists
+            # Only add list items if they are not already within 'ol'
+            if not element.find_parent('ol'):
+                add_list_item(doc, element)
         elif element.name == 'ol':
-            # Handle ordered lists by adding a numbered list
+            # Process ordered lists
             add_numbered_list(doc, element)
+
+def add_heading(doc, element):
+    """
+    Add a heading to the document.
+    """
+    level = int(element.name[1])  # Get the level from h1, h2, etc.
+    heading = doc.add_heading(element.get_text(), level=level)
+    set_paragraph_rtl(heading)
+
+def add_paragraph(doc, element):
+    """
+    Add a paragraph to the document.
+    """
+    paragraph = doc.add_paragraph(element.get_text())
+    set_paragraph_rtl(paragraph)
 
 def add_list_item(doc, element):
     """
