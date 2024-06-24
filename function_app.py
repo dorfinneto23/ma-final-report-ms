@@ -307,7 +307,7 @@ def union_clinic_areas(table_name, caseid):
         content_path = entity['assistantResponsefiltered']
         filecontent = get_content(content_path)
         if filecontent!="":
-            combined_content += "# " + clinic_area + "\n" + filecontent + "\n"
+            combined_content += "# " + clinic_area + "\n\n" + filecontent + "\n\n"
     #save union content of all clinic areas         
     save_final_files(combined_content,caseid,union_file_name,destination_folder)
     text_heb = translate_text(combined_content)
