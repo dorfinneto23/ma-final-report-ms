@@ -71,7 +71,7 @@ def orgainze_content(finalReport):
     except Exception as e:
         return f"{str(e)}"  
 
-#-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
+
 
 # Helper function to download blob content to stream 
 def download_blob_stream(path):
@@ -84,6 +84,8 @@ def download_blob_stream(path):
         blob_client.download_blob().download_to_stream(stream)
         stream.seek(0)
         return stream
+
+#-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 
 def set_rtl(paragraph):
     """Set the paragraph text direction to right-to-left (RTL)."""
@@ -118,42 +120,35 @@ def parse_html_to_docx(soup, document):
         run = paragraph.runs[0]
         run.font.size = Pt(12)
         run.font.color.rgb = RGBColor(0, 0, 0)
-        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+    def process_list(tag, level=0):
+        if tag.name == 'ul':
+            bullet = True
+        else:
+            bullet = False
+
+        for li in tag.find_all('li', recursive=False):
+            strong_text = li.find('strong')
+            if strong_text:
+                add_list_item(strong_text.text + li.text.replace(strong_text.text, ''), level, bullet)
+            else:
+                add_list_item(li.text.strip(), level, bullet)
+
+            # Process nested lists
+            for child in li.find_all(['ul', 'ol'], recursive=False):
+                process_list(child, level + 1)
 
     for tag in soup.find_all(['h1', 'ol', 'ul']):
         if tag.name == 'h1':
             add_heading(tag.text, level=1)
-        elif tag.name == 'ol':
-            for li in tag.find_all('li', recursive=False):
-                strong_text = li.find('strong')
-                if strong_text:
-                    add_paragraph(strong_text.text, bold=True)
-                else:
-                    add_list_item(li.text.strip(), level=1, bullet=False)
-                ul = li.find('ul')
-                if ul:
-                    for ul_li in ul.find_all('li', recursive=False):
-                        strong_text = ul_li.find('strong')
-                        if strong_text:
-                            add_paragraph(f"{strong_text.text} {ul_li.text.replace(strong_text.text, '').strip()}")
-                        else:
-                            add_list_item(ul_li.text.strip(), level=2, bullet=True)
-                ol = li.find('ol')
-                if ol:
-                    for ol_li in ol.find_all('li', recursive=False):
-                        strong_text = ol_li.find('strong')
-                        if strong_text:
-                            add_paragraph(f"{strong_text.text} {ol_li.text.replace(strong_text.text, '').strip()}")
-                        else:
-                            add_list_item(ol_li.text.strip(), level=2, bullet=False)
-
-
+        elif tag.name in ['ol', 'ul']:
+            process_list(tag)
 
 def set_docx_rtl(document):
     section = document.sections[0]
     section.right_margin = section.left_margin
     for paragraph in document.paragraphs:
-        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        set_rtl(paragraph)
 
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
