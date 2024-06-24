@@ -96,12 +96,14 @@ def parse_html_to_docx(soup, document):
     added_entries = set()
 
     def add_heading(text, level):
-        heading = document.add_heading(level=level)
-        run = heading.add_run(text)
-        set_rtl(heading)
-        run.font.size = Pt(14)
-        run.font.bold = True
-        run.font.color.rgb = RGBColor(0, 0, 0)
+        if text not in added_entries:
+            added_entries.add(text)
+            heading = document.add_heading(level=level)
+            run = heading.add_run(text)
+            set_rtl(heading)
+            run.font.size = Pt(14)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0, 0, 0)
 
     def add_paragraph(text, bold=False, style=None):
         if text not in added_entries:
@@ -137,7 +139,7 @@ def parse_html_to_docx(soup, document):
             strong_text = li.find('strong')
             if strong_text:
                 text = strong_text.text + li.text.replace(strong_text.text, '')
-                add_list_item(text, level, bullet)
+                add_list_item(text.strip(), level, bullet)
             else:
                 add_list_item(li.text.strip(), level, bullet)
 
