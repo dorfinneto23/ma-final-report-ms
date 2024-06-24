@@ -85,7 +85,7 @@ def download_blob_stream(path):
         stream.seek(0)
         return stream
 
-def parse_html_to_docx(soup, doc):
+def parse_html_to_docx(soup, document):
 
     def add_heading(text, level):
         heading = document.add_heading(level=level)
