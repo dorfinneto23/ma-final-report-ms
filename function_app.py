@@ -98,7 +98,7 @@ def parse_html_to_docx(soup, doc):
             run.font.color.rgb = RGBColor(*color)
         if align_right:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
     def handle_list(tag, doc, level=0):
         for item in tag.find_all("li", recursive=False):
@@ -106,9 +106,11 @@ def parse_html_to_docx(soup, doc):
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT  # Set RTL direction for list items
             for content in item.contents:
                 if content.name == 'p':
-                    add_paragraph(doc, content.get_text(), align_right=True)
+                    p = doc.add_paragraph(style=f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}')
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    add_paragraph(p, content.get_text(), align_right=True)
                 else:
-                    handle_tag(content, p)
+                    handle_tag(content, doc)
 
             for sublist in item.find_all(['ul', 'ol'], recursive=False):
                 handle_list(sublist, doc, level + 1)
@@ -124,9 +126,10 @@ def parse_html_to_docx(soup, doc):
             # Handle <em> within other tags
             run = doc.add_paragraph().add_run(tag.get_text())
             run.italic = True
-            run.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+            run.font.size = Pt(12)
+            run.font.color.rgb = RGBColor(0, 0, 0)
+            run.paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-    # Handle the case where soup.body might be None
     elements = soup.body.children if soup.body else soup.children
     for element in elements:
         handle_tag(element, doc)
