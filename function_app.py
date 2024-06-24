@@ -93,6 +93,8 @@ def set_rtl(paragraph):
     paragraph._element.get_or_add_pPr().append(OxmlElement('w:bidi'))
 
 def parse_html_to_docx(soup, document):
+    added_entries = set()
+
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
@@ -102,24 +104,28 @@ def parse_html_to_docx(soup, document):
         run.font.color.rgb = RGBColor(0, 0, 0)
 
     def add_paragraph(text, bold=False, style=None):
-        paragraph = document.add_paragraph(style=style)
-        run = paragraph.add_run(text)
-        set_rtl(paragraph)
-        run.font.size = Pt(12)
-        run.font.bold = bold
-        run.font.color.rgb = RGBColor(0, 0, 0)
+        if text not in added_entries:
+            added_entries.add(text)
+            paragraph = document.add_paragraph(style=style)
+            run = paragraph.add_run(text)
+            set_rtl(paragraph)
+            run.font.size = Pt(12)
+            run.font.bold = bold
+            run.font.color.rgb = RGBColor(0, 0, 0)
 
     def add_list_item(text, level, bullet=False):
-        if bullet:
-            style = 'List Bullet'
-        else:
-            style = 'List Number'
+        if text not in added_entries:
+            added_entries.add(text)
+            if bullet:
+                style = 'List Bullet'
+            else:
+                style = 'List Number'
 
-        paragraph = document.add_paragraph(text, style=style)
-        set_rtl(paragraph)
-        run = paragraph.runs[0]
-        run.font.size = Pt(12)
-        run.font.color.rgb = RGBColor(0, 0, 0)
+            paragraph = document.add_paragraph(text, style=style)
+            set_rtl(paragraph)
+            run = paragraph.runs[0]
+            run.font.size = Pt(12)
+            run.font.color.rgb = RGBColor(0, 0, 0)
 
     def process_list(tag, level=0):
         if tag.name == 'ul':
@@ -130,7 +136,8 @@ def parse_html_to_docx(soup, document):
         for li in tag.find_all('li', recursive=False):
             strong_text = li.find('strong')
             if strong_text:
-                add_list_item(strong_text.text + li.text.replace(strong_text.text, ''), level, bullet)
+                text = strong_text.text + li.text.replace(strong_text.text, '')
+                add_list_item(text, level, bullet)
             else:
                 add_list_item(li.text.strip(), level, bullet)
 
@@ -149,7 +156,6 @@ def set_docx_rtl(document):
     section.right_margin = section.left_margin
     for paragraph in document.paragraphs:
         set_rtl(paragraph)
-
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
