@@ -85,11 +85,16 @@ def download_blob_stream(path):
         stream.seek(0)
         return stream
 
+def set_rtl(paragraph):
+    """Set the paragraph text direction to right-to-left (RTL)."""
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+    paragraph._element.get_or_add_pPr().append(OxmlElement('w:bidi'))
+
 def parse_html_to_docx(soup, document):
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
-        heading.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        set_rtl(heading)
         run.font.size = Pt(14)
         run.font.bold = True
         run.font.color.rgb = RGBColor(0, 0, 0)
@@ -97,7 +102,7 @@ def parse_html_to_docx(soup, document):
     def add_paragraph(text, bold=False, style=None):
         paragraph = document.add_paragraph(style=style)
         run = paragraph.add_run(text)
-        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        set_rtl(paragraph)
         run.font.size = Pt(12)
         run.font.bold = bold
         run.font.color.rgb = RGBColor(0, 0, 0)
@@ -109,6 +114,7 @@ def parse_html_to_docx(soup, document):
             style = 'List Number'
 
         paragraph = document.add_paragraph(text, style=style)
+        set_rtl(paragraph)
         run = paragraph.runs[0]
         run.font.size = Pt(12)
         run.font.color.rgb = RGBColor(0, 0, 0)
