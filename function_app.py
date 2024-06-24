@@ -87,87 +87,45 @@ def download_blob_stream(path):
 
 def parse_html_to_docx(soup, doc):
 
-    def add_paragraph(doc, text, bold=False, italic=False, underline=False, font_size=12, color=None, align_right=False):
-        paragraph = doc.add_paragraph()
+    def add_heading(text, level):
+        heading = document.add_heading(level=level)
+        run = heading.add_run(text)
+        heading.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        run.font.size = Pt(14)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor(0, 0, 0)
+
+    def add_paragraph(text, bold=False):
+        paragraph = document.add_paragraph()
         run = paragraph.add_run(text)
-        run.bold = bold
-        run.italic = italic
-        run.underline = underline
-        run.font.size = Pt(font_size)
-        if color:
-            run.font.color.rgb = RGBColor(*color)
-        if align_right:
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        run.font.size = Pt(12)
+        run.font.bold = bold
+        run.font.color.rgb = RGBColor(0, 0, 0)
 
-    def handle_list(tag, doc, level=0):
-        for item in tag.find_all("li", recursive=False):
-            list_style = f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}'
-            p = doc.add_paragraph(style=list_style)
-            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT  # Set RTL direction for list items
-            for content in item.contents:
-                if content.name == 'p':
-                    p = doc.add_paragraph(style=list_style)
-                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                    add_paragraph(p, content.get_text(), align_right=True)
-                elif content.name == 'strong':
-                    run = p.add_run(content.get_text())
-                    run.bold = True
-                elif content.name == 'em':
-                    run = p.add_run(content.get_text())
-                    run.italic = True
-                else:
-                    handle_tag(content, doc)
-
-            for sublist in item.find_all(['ul', 'ol'], recursive=False):
-                handle_list(sublist, doc, level + 1)
-
-    def handle_tag(tag, doc):
+    for tag in soup.find_all(['h1', 'ol']):
         if tag.name == 'h1':
-            add_paragraph(doc, tag.get_text(), bold=True, font_size=16, align_right=True)
-        elif tag.name == 'p':
-            add_paragraph(doc, tag.get_text(), align_right=True)
-        elif tag.name in ['ul', 'ol']:
-            handle_list(tag, doc)
-        elif tag.name == 'strong':
-            run = doc.add_paragraph().add_run(tag.get_text())
-            run.bold = True
-            run.font.size = Pt(12)
-            run.font.color.rgb = RGBColor(0, 0, 0)
-            run.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        elif tag.name == 'em':
-            run = doc.add_paragraph().add_run(tag.get_text())
-            run.italic = True
-            run.font.size = Pt(12)
-            run.font.color.rgb = RGBColor(0, 0, 0)
-            run.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-
-    elements = soup.body.children if soup.body else soup.children
-    for element in elements:
-        handle_tag(element, doc)
+            add_heading(tag.text, level=1)
+        elif tag.name == 'ol':
+            for li in tag.find_all('li', recursive=False):
+                strong_text = li.find('strong')
+                if strong_text:
+                    add_paragraph(strong_text.text, bold=True)
+                ul = li.find('ul')
+                if ul:
+                    for ul_li in ul.find_all('li', recursive=False):
+                        strong_text = ul_li.find('strong')
+                        if strong_text:
+                            add_paragraph(f"{strong_text.text} {ul_li.text.replace(strong_text.text, '').strip()}")
 
 
 
-def set_docx_rtl(doc):
-    # Set the default paragraph style to align right for RTL
-    style = doc.styles['Normal']
-    paragraph_format = style.paragraph_format
-    paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+def set_docx_rtl(document):
+    section = document.sections[0]
+    section.right_margin = section.left_margin
+    for paragraph in document.paragraphs:
+        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
 
-    # Create specific RTL styles for lists
-    for i in range(9):
-        style_name_bullet = f'ListBullet{i}'
-        style_name_number = f'ListNumber{i}'
-        if style_name_bullet not in doc.styles:
-            style = doc.styles.add_style(style_name_bullet, 1)  # 1 corresponds to a list bullet style
-            style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        if style_name_number not in doc.styles:
-            style = doc.styles.add_style(style_name_number, 1)  # 1 corresponds to a list number style
-            style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-
-    # Apply RTL to existing paragraphs
-    for paragraph in doc.paragraphs:
-        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
@@ -184,7 +142,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
         # Convert Markdown content to HTML
         html_content = markdown2.markdown(markdown_txt_content)
 
-        #Debug: Print HTML content
+        # Debug: Print HTML content
         logging.info(f"HTML content: {html_content}")
 
         # Parse HTML content
@@ -200,7 +158,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
         
         # Save HTML content to a file
         html_file_name = "final_html.txt"
-        save_final_files(html_content_rtl, caseid, html_file_name,destination_folder)
+        save_final_files(html_content_rtl, caseid, html_file_name, destination_folder)
         
         doc = Document()
 
@@ -210,7 +168,6 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
         # Add content to DOCX
         parse_html_to_docx(soup, doc)
         
-
         # Save the new DOCX document to a stream
         new_doc_stream = io.BytesIO()
         doc.save(new_doc_stream)
@@ -218,7 +175,7 @@ def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder)
 
         # Save the new DOCX document to Azure Storage
         doc_file_name = "final.docx"
-        docx_path = save_final_files(new_doc_stream, caseid, doc_file_name,destination_folder)
+        docx_path = save_final_files(new_doc_stream, caseid, doc_file_name, destination_folder)
         logging.info(f"Document saved to {docx_path}")
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
