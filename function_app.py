@@ -102,13 +102,12 @@ def parse_html_to_docx(soup, doc):
 
     def handle_list(tag, doc, level=0):
         for item in tag.find_all("li", recursive=False):
-            p = doc.add_paragraph(style=f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}')
+            list_style = f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}'
+            p = doc.add_paragraph(style=list_style)
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT  # Set RTL direction for list items
             for content in item.contents:
                 if content.name == 'p':
-                    p = doc.add_paragraph(style=f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}')
-                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                    add_paragraph(p, content.get_text(), align_right=True)
+                    add_paragraph(doc, content.get_text(), align_right=True)
                 else:
                     handle_tag(content, doc)
 
@@ -128,7 +127,7 @@ def parse_html_to_docx(soup, doc):
             run.italic = True
             run.font.size = Pt(12)
             run.font.color.rgb = RGBColor(0, 0, 0)
-            run.paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
     elements = soup.body.children if soup.body else soup.children
     for element in elements:
