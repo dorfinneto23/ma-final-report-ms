@@ -107,32 +107,35 @@ def set_paragraph_rtl(paragraph):
 
 def parse_html_to_docx(soup, doc):
 
-    processed_texts = set()  # To store processed texts
+    processed_texts = set()  # To store processed texts with context
 
     for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol', 'ul']):
         text_content = element.get_text().strip()
-        if text_content in processed_texts:
+
+        # Track the context of list items
+        parent_tag = element.find_parent(['ol', 'ul'])
+        if parent_tag:
+            list_context = f"{parent_tag.name}:{text_content}"
+        else:
+            list_context = text_content
+
+        if list_context in processed_texts:
             continue  # Skip already processed content
 
-        processed_texts.add(text_content)
+        processed_texts.add(list_context)
 
         if element.name.startswith('h'):
-            # Process headings
             add_heading(doc, element)
         elif element.name == 'p':
-            # Process paragraphs
             add_paragraph(doc, element)
         elif element.name == 'li':
-            # Handle list items within ordered and unordered lists
-            if element.find_parent('ol'):
+            if parent_tag and parent_tag.name == 'ol':
                 add_list_item(doc, element, list_type='number')
-            elif element.find_parent('ul'):
+            elif parent_tag and parent_tag.name == 'ul':
                 add_list_item(doc, element, list_type='bullet')
         elif element.name == 'ol':
-            # Process ordered lists
             add_numbered_list(doc, element)
         elif element.name == 'ul':
-            # Process unordered lists
             add_bulleted_list(doc, element)
 
 def add_heading(doc, element):
