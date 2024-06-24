@@ -15,10 +15,11 @@ import markdown2
 from bs4 import BeautifulSoup
 from docx import Document
 import markdown
-from docx.shared import Pt
+from docx.shared import Pt, RGBColor
 from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import tempfile
 
 
@@ -84,110 +85,59 @@ def download_blob_stream(path):
         stream.seek(0)
         return stream
 
-
-def set_docx_rtl(doc):
-    """
-    Set the document direction to RTL by setting RTL for each paragraph.
-    """
-    for paragraph in doc.paragraphs:
-        set_paragraph_rtl(paragraph)
-
-
-def set_paragraph_rtl(paragraph):
-    """
-    Set a paragraph's direction to RTL.
-    """
-    if paragraph is not None:
-        p = paragraph._element
-        pPr = p.get_or_add_pPr()
-        bidi = OxmlElement('w:bidi')
-        bidi.set(qn('w:val'), "1")
-        pPr.append(bidi)
-
-
 def parse_html_to_docx(soup, doc):
 
-    processed_texts = set()  # To store processed texts with context
+    def add_paragraph(doc, text, bold=False, italic=False, underline=False, font_size=12, color=None, align_right=False):
+        paragraph = doc.add_paragraph()
+        run = paragraph.add_run(text)
+        run.bold = bold
+        run.italic = italic
+        run.underline = underline
+        run.font.size = Pt(font_size)
+        if color:
+            run.font.color.rgb = RGBColor(*color)
+        if align_right:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol', 'ul']):
-        text_content = element.get_text().strip()
+    def handle_list(tag, doc, level=0):
+        for item in tag.find_all("li", recursive=False):
+            p = doc.add_paragraph(style=f'ListBullet{level}' if tag.name == 'ul' else f'ListNumber{level}')
+            for content in item.contents:
+                if content.name == 'p':
+                    add_paragraph(doc, content.get_text(), align_right=True)
+                else:
+                    handle_tag(content, p)
 
-        # Track the context of list items
-        parent_tag = element.find_parent(['ol', 'ul'])
-        if parent_tag:
-            list_context = f"{parent_tag.name}:{text_content}"
-        else:
-            list_context = text_content
+            for sublist in item.find_all(['ul', 'ol'], recursive=False):
+                handle_list(sublist, doc, level + 1)
 
-        if list_context in processed_texts:
-            continue  # Skip already processed content
+    def handle_tag(tag, doc):
+        if tag.name == 'h1':
+            add_paragraph(doc, tag.get_text(), bold=True, font_size=16, align_right=True)
+        elif tag.name == 'p':
+            add_paragraph(doc, tag.get_text(), align_right=True)
+        elif tag.name in ['ul', 'ol']:
+            handle_list(tag, doc)
 
-        processed_texts.add(list_context)
+    for element in soup.body.children:
+        handle_tag(element, doc)
 
-        if element.name.startswith('h'):
-            add_heading(doc, element)
-        elif element.name == 'p':
-            add_paragraph(doc, element)
-        elif element.name == 'li':
-            if parent_tag and parent_tag.name == 'ol':
-                add_list_item(doc, element, list_type='number')
-            elif parent_tag and parent_tag.name == 'ul':
-                add_list_item(doc, element, list_type='bullet')
-        elif element.name == 'ol':
-            add_numbered_list(doc, element)
-        elif element.name == 'ul':
-            add_bulleted_list(doc, element)
+def set_docx_rtl(doc):
+    # Set document default to RTL
+    doc.styles['Normal'].paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    doc.styles['Normal']._element.get_or_add_pPr().append(doc.styles.element.createElement(qn('w:bidi')))
+    # Create specific RTL styles for lists
+    for i in range(9):
+        style_name_bullet = f'ListBullet{i}'
+        style_name_number = f'ListNumber{i}'
+        if style_name_bullet not in doc.styles:
+            style = doc.styles.add_style(style_name_bullet, 1)
+            style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        if style_name_number not in doc.styles:
+            style = doc.styles.add_style(style_name_number, 1)
+            style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
-def add_heading(doc, element):
-    """
-    Add a heading to the document.
-    """
-    level = int(element.name[1])  # Get the level from h1, h2, etc.
-    heading = doc.add_heading(element.get_text(), level=level)
-    set_paragraph_rtl(heading)
-
-def add_paragraph(doc, element):
-    """
-    Add a paragraph to the document.
-    """
-    paragraph = doc.add_paragraph(element.get_text())
-    set_paragraph_rtl(paragraph)
-
-def add_list_item(doc, element, list_type='bullet'):
-    """
-    Add a list item to the document.
-    """
-    if list_type == 'number':
-        paragraph = doc.add_paragraph(style='List Number')
-    else:
-        paragraph = doc.add_paragraph(style='List Bullet')
-    paragraph.add_run(element.get_text())
-    set_paragraph_rtl(paragraph)
-
-def add_numbered_list(doc, ol_element, level=0):
-    """
-    Add a numbered list to the document.
-    """
-    for li in ol_element.find_all('li', recursive=False):
-        add_list_item(doc, li, list_type='number')
-        # Check for nested lists within this list item
-        for nested_ol in li.find_all('ol', recursive=False):
-            add_numbered_list(doc, nested_ol, level + 1)
-        for nested_ul in li.find_all('ul', recursive=False):
-            add_bulleted_list(doc, nested_ul, level + 1)
-
-def add_bulleted_list(doc, ul_element, level=0):
-    """
-    Add a bulleted list to the document.
-    """
-    for li in ul_element.find_all('li', recursive=False):
-        add_list_item(doc, li, list_type='bullet')
-        # Check for nested lists within this list item
-        for nested_ol in li.find_all('ol', recursive=False):
-            add_numbered_list(doc, nested_ol, level + 1)
-        for nested_ul in li.find_all('ul', recursive=False):
-            add_bulleted_list(doc, nested_ul, level + 1)
-
+#-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
