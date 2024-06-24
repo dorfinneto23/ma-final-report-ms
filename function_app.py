@@ -107,7 +107,15 @@ def parse_html_to_docx(soup, doc):
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT  # Set RTL direction for list items
             for content in item.contents:
                 if content.name == 'p':
-                    add_paragraph(doc, content.get_text(), align_right=True)
+                    p = doc.add_paragraph(style=list_style)
+                    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                    add_paragraph(p, content.get_text(), align_right=True)
+                elif content.name == 'strong':
+                    run = p.add_run(content.get_text())
+                    run.bold = True
+                elif content.name == 'em':
+                    run = p.add_run(content.get_text())
+                    run.italic = True
                 else:
                     handle_tag(content, doc)
 
@@ -121,8 +129,13 @@ def parse_html_to_docx(soup, doc):
             add_paragraph(doc, tag.get_text(), align_right=True)
         elif tag.name in ['ul', 'ol']:
             handle_list(tag, doc)
+        elif tag.name == 'strong':
+            run = doc.add_paragraph().add_run(tag.get_text())
+            run.bold = True
+            run.font.size = Pt(12)
+            run.font.color.rgb = RGBColor(0, 0, 0)
+            run.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         elif tag.name == 'em':
-            # Handle <em> within other tags
             run = doc.add_paragraph().add_run(tag.get_text())
             run.italic = True
             run.font.size = Pt(12)
@@ -132,6 +145,7 @@ def parse_html_to_docx(soup, doc):
     elements = soup.body.children if soup.body else soup.children
     for element in elements:
         handle_tag(element, doc)
+
 
 
 def set_docx_rtl(doc):
