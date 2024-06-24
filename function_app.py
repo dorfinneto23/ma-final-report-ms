@@ -107,7 +107,15 @@ def set_paragraph_rtl(paragraph):
 
 def parse_html_to_docx(soup, doc):
 
+    processed_texts = set()  # To store processed texts
+
     for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li', 'ol', 'ul']):
+        text_content = element.get_text().strip()
+        if text_content in processed_texts:
+            continue  # Skip already processed content
+
+        processed_texts.add(text_content)
+
         if element.name.startswith('h'):
             # Process headings
             add_heading(doc, element)
