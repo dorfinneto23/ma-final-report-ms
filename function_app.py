@@ -123,19 +123,25 @@ def parse_html_to_docx(soup, doc):
         handle_tag(element, doc)
 
 def set_docx_rtl(doc):
-    # Set document default to RTL
-    doc.styles['Normal'].paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    doc.styles['Normal']._element.get_or_add_pPr().append(doc.styles.element.createElement(qn('w:bidi')))
+    # Set the default paragraph style to align right for RTL
+    style = doc.styles['Normal']
+    paragraph_format = style.paragraph_format
+    paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
     # Create specific RTL styles for lists
     for i in range(9):
         style_name_bullet = f'ListBullet{i}'
         style_name_number = f'ListNumber{i}'
         if style_name_bullet not in doc.styles:
-            style = doc.styles.add_style(style_name_bullet, 1)
+            style = doc.styles.add_style(style_name_bullet, 1)  # 1 corresponds to a list bullet style
             style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         if style_name_number not in doc.styles:
-            style = doc.styles.add_style(style_name_number, 1)
+            style = doc.styles.add_style(style_name_number, 1)  # 1 corresponds to a list number style
             style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    # Apply RTL to existing paragraphs
+    for paragraph in doc.paragraphs:
+        paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.RIGHT
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
