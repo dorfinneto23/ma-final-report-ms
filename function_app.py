@@ -86,7 +86,6 @@ def download_blob_stream(path):
         return stream
 
 def parse_html_to_docx(soup, document):
-
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
@@ -95,15 +94,27 @@ def parse_html_to_docx(soup, document):
         run.font.bold = True
         run.font.color.rgb = RGBColor(0, 0, 0)
 
-    def add_paragraph(text, bold=False):
-        paragraph = document.add_paragraph()
+    def add_paragraph(text, bold=False, style=None):
+        paragraph = document.add_paragraph(style=style)
         run = paragraph.add_run(text)
         paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
         run.font.size = Pt(12)
         run.font.bold = bold
         run.font.color.rgb = RGBColor(0, 0, 0)
 
-    for tag in soup.find_all(['h1', 'ol']):
+    def add_list_item(text, level, bullet=False):
+        if bullet:
+            style = 'List Bullet'
+        else:
+            style = 'List Number'
+
+        paragraph = document.add_paragraph(text, style=style)
+        run = paragraph.runs[0]
+        run.font.size = Pt(12)
+        run.font.color.rgb = RGBColor(0, 0, 0)
+        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
+    for tag in soup.find_all(['h1', 'ol', 'ul']):
         if tag.name == 'h1':
             add_heading(tag.text, level=1)
         elif tag.name == 'ol':
@@ -111,12 +122,24 @@ def parse_html_to_docx(soup, document):
                 strong_text = li.find('strong')
                 if strong_text:
                     add_paragraph(strong_text.text, bold=True)
+                else:
+                    add_list_item(li.text.strip(), level=1, bullet=False)
                 ul = li.find('ul')
                 if ul:
                     for ul_li in ul.find_all('li', recursive=False):
                         strong_text = ul_li.find('strong')
                         if strong_text:
                             add_paragraph(f"{strong_text.text} {ul_li.text.replace(strong_text.text, '').strip()}")
+                        else:
+                            add_list_item(ul_li.text.strip(), level=2, bullet=True)
+                ol = li.find('ol')
+                if ol:
+                    for ol_li in ol.find_all('li', recursive=False):
+                        strong_text = ol_li.find('strong')
+                        if strong_text:
+                            add_paragraph(f"{strong_text.text} {ol_li.text.replace(strong_text.text, '').strip()}")
+                        else:
+                            add_list_item(ol_li.text.strip(), level=2, bullet=False)
 
 
 
