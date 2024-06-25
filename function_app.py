@@ -125,17 +125,23 @@ def parse_html_to_docx(soup, document):
 
 def set_rtl_direction(paragraph):
     """Sets the paragraph's text direction to RTL."""
+    paragraph_format = paragraph.paragraph_format
+    paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+    # Add RTL property to paragraph
+    paragraph_element = paragraph._element
+    bidi = OxmlElement('w:bidi')
+    bidi.set(qn('w:val'), '1')
+    paragraph_element.get_or_add_pPr().append(bidi)
+    
+    # Set the text direction for each run in the paragraph
     for run in paragraph.runs:
         rPr = run._element.get_or_add_rPr()
-        bidi = OxmlElement('w:bidi')
-        bidi.set(qn('w:val'), '1')
-        rPr.append(bidi)
+        bidi_run = OxmlElement('w:bidi')
+        bidi_run.set(qn('w:val'), '1')
+        rPr.append(bidi_run)
 
 def set_docx_rtl(document):
-    section = document.sections[0]
-    section.right_margin = section.left_margin
     for paragraph in document.paragraphs:
-        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
         set_rtl_direction(paragraph)
 
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
