@@ -4,7 +4,6 @@ import os #in order to get parameters values from azure function app enviroment 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient # in order to use azure container storage
 import io # in order to download pdf to memory and write into memory without disk permission needed 
 import json # in order to use json 
-import pyodbc #for sql connections 
 from azure.servicebus import ServiceBusClient, ServiceBusMessage # in order to use azure service bus 
 from openai import AzureOpenAI #for using openai services 
 from azure.data.tables import TableServiceClient, TableClient, UpdateMode # in order to use azure storage table  
@@ -32,12 +31,6 @@ connection_string_servicebus = os.environ.get('servicebusConnectionString')
 #translate key
 translate_key = os.environ.get('translate_key')
 
-# Define connection details
-server = 'medicalanalysis-sqlserver.database.windows.net'
-database = 'medicalanalysis'
-username = os.environ.get('sql_username')
-password = os.environ.get('sql_password')
-driver= '{ODBC Driver 18 for SQL Server}'
 
 
 # Update field on specific entity/ row in storage table 
