@@ -88,7 +88,6 @@ def download_blob_stream(path):
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 
 def parse_html_to_docx(soup, document):
-
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
@@ -96,6 +95,8 @@ def parse_html_to_docx(soup, document):
         run.font.size = Pt(14)
         run.font.bold = True
         run.font.color.rgb = RGBColor(0, 0, 0)
+        # Set the text direction to RTL
+        set_rtl_direction(heading)
 
     def add_paragraph(text, bold=False):
         paragraph = document.add_paragraph()
@@ -104,6 +105,8 @@ def parse_html_to_docx(soup, document):
         run.font.size = Pt(12)
         run.font.bold = bold
         run.font.color.rgb = RGBColor(0, 0, 0)
+        # Set the text direction to RTL
+        set_rtl_direction(paragraph)
 
     for tag in soup.find_all(['h1', 'ol']):
         if tag.name == 'h1':
@@ -120,15 +123,21 @@ def parse_html_to_docx(soup, document):
                         if strong_text:
                             add_paragraph(f"{strong_text.text} {ul_li.text.replace(strong_text.text, '').strip()}")
 
-
+def set_rtl_direction(paragraph):
+    """Sets the paragraph's text direction to RTL."""
+    for run in paragraph.runs:
+        rPr = run._element.get_or_add_rPr()
+        bidi = OxmlElement('w:bidi')
+        bidi.set(qn('w:val'), '1')
+        rPr.append(bidi)
 
 def set_docx_rtl(document):
     section = document.sections[0]
     section.right_margin = section.left_margin
     for paragraph in document.paragraphs:
         paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        set_rtl_direction(paragraph)
 
-#-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
     try:
         reference_docx_blob_path = "configuration/custom-reference.docx"
