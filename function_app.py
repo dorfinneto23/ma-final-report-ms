@@ -73,15 +73,16 @@ def download_blob_stream(path):
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 # Function to download image from Azure Blob Storage
-def download_image_from_blob(image_url):
-    response = requests.get(image_url)
-    if response.status_code == 200:
+def download_image_from_blob(path):
+        container_name = "medicalanalysis"
+        blob_service_client = BlobServiceClient.from_connection_string(connection_string_blob)
+        container_client = blob_service_client.get_container_client(container_name)
+        blob_client = container_client.get_blob_client(path)
         temp_image_path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
-        with open(temp_image_path, 'wb') as f:
-            f.write(response.content)
+        with open(temp_image_path, "wb") as download_file:
+         download_file.write(blob_client.download_blob().readall())
+    
         return temp_image_path
-    else:
-        raise Exception(f"Failed to download image: {response.status_code}")
     
 # Function to add image to the header
 def add_image_to_header(doc, image_path):
@@ -95,10 +96,10 @@ def add_image_to_header(doc, image_path):
 def parse_html_to_docx(soup, document):
 
     # Download the image and get the local path
-    image_path = download_image_from_blob("https://medicalanalysis.blob.core.windows.net/medicalanalysis/configuration/logo_doc.png")
+    image_path = download_image_from_blob("configuration/logo_doc.png")
     # Call the function to add image to the header
     add_image_to_header(document, image_path)
-    
+
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
