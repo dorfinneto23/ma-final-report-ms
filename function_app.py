@@ -14,7 +14,7 @@ import markdown2
 from bs4 import BeautifulSoup
 from docx import Document
 import markdown
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor,Inches
 from docx.oxml.ns import qn
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
@@ -73,7 +73,20 @@ def download_blob_stream(path):
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 
+# Function to add image to the header
+def add_image_to_header(doc, image_path):
+    section = doc.sections[0]
+    header = section.header
+    paragraph = header.paragraphs[0]
+    run = paragraph.add_run()
+    run.add_picture(image_path, width=Inches(2))  # Adjust width as needed
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+
 def parse_html_to_docx(soup, document):
+
+    # Call the function to add image to the header
+    add_image_to_header(document, "https://medicalanalysis.blob.core.windows.net/medicalanalysis/configuration/logo_doc.png")  # Update with your image path
+
     def add_heading(text, level):
         heading = document.add_heading(level=level)
         run = heading.add_run(text)
