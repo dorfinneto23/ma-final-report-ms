@@ -40,38 +40,6 @@ password = os.environ.get('sql_password')
 driver= '{ODBC Driver 18 for SQL Server}'
 
 
-#OpenAI Details 
-client = AzureOpenAI(
-  api_key = os.environ.get('AzureOpenAI_pi_key'),
-  api_version = "2024-02-01",
-  azure_endpoint = "https://openaisponsorship.openai.azure.com/"
-)
-
-openai_model = "ProofitGPT4o"
-
-
-#  Function using openai to organize the text  
-def orgainze_content(finalReport):
-    
-    try:
-        mission = mission = (
-            f"please add markdown and organize the following report in Hebrew :\n{finalReport}\n"
-        )
-        #chat request for content analysis 
-        response = client.chat.completions.create(
-                    model=openai_model,
-                    messages=[
-                        {"role": "system", "content": mission},
-                        {"role": "user", "content": "please add markdown and organize the following report in Hebrew"}
-                    ]
-         )
-        logging.info(f"Response from openai: {response.choices[0].message.content}")
-        result = response.choices[0].message.content.lower()
-        return result
-    except Exception as e:
-        return f"{str(e)}"  
-
-
 
 # Helper function to download blob content to stream 
 def download_blob_stream(path):
