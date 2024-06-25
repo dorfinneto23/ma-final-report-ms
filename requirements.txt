@@ -4,7 +4,6 @@
 
 azure-functions
 azure.storage.blob
-pyodbc
 azure.servicebus
 openai
 azure.data.tables
