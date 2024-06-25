@@ -87,77 +87,46 @@ def download_blob_stream(path):
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 
-def set_rtl(paragraph):
-    """Set the paragraph text direction to right-to-left (RTL)."""
-    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
-    paragraph._element.get_or_add_pPr().append(OxmlElement('w:bidi'))
-
 def parse_html_to_docx(soup, document):
-    added_entries = set()
 
     def add_heading(text, level):
-        if text not in added_entries:
-            added_entries.add(text)
-            heading = document.add_heading(level=level)
-            run = heading.add_run(text)
-            set_rtl(heading)
-            run.font.size = Pt(14)
-            run.font.bold = True
-            run.font.color.rgb = RGBColor(0, 0, 0)
+        heading = document.add_heading(level=level)
+        run = heading.add_run(text)
+        heading.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        run.font.size = Pt(14)
+        run.font.bold = True
+        run.font.color.rgb = RGBColor(0, 0, 0)
 
-    def add_paragraph(text, bold=False, style=None):
-        if text not in added_entries:
-            added_entries.add(text)
-            paragraph = document.add_paragraph(style=style)
-            run = paragraph.add_run(text)
-            set_rtl(paragraph)
-            run.font.size = Pt(12)
-            run.font.bold = bold
-            run.font.color.rgb = RGBColor(0, 0, 0)
+    def add_paragraph(text, bold=False):
+        paragraph = document.add_paragraph()
+        run = paragraph.add_run(text)
+        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+        run.font.size = Pt(12)
+        run.font.bold = bold
+        run.font.color.rgb = RGBColor(0, 0, 0)
 
-    def add_list_item(text, level, bullet=False):
-        if text not in added_entries:
-            added_entries.add(text)
-            if bullet:
-                style = 'List Bullet'
-            else:
-                style = 'List Number'
-
-            paragraph = document.add_paragraph(text, style=style)
-            set_rtl(paragraph)
-            run = paragraph.runs[0]
-            run.font.size = Pt(12)
-            run.font.color.rgb = RGBColor(0, 0, 0)
-
-    def process_list(tag, level=0):
-        if tag.name == 'ul':
-            bullet = True
-        else:
-            bullet = False
-
-        for li in tag.find_all('li', recursive=False):
-            strong_text = li.find('strong')
-            if strong_text:
-                text = strong_text.text + li.text.replace(strong_text.text, '')
-                add_list_item(text.strip(), level, bullet)
-            else:
-                add_list_item(li.text.strip(), level, bullet)
-
-            # Process nested lists
-            for child in li.find_all(['ul', 'ol'], recursive=False):
-                process_list(child, level + 1)
-
-    for tag in soup.find_all(['h1', 'ol', 'ul']):
+    for tag in soup.find_all(['h1', 'ol']):
         if tag.name == 'h1':
             add_heading(tag.text, level=1)
-        elif tag.name in ['ol', 'ul']:
-            process_list(tag)
+        elif tag.name == 'ol':
+            for li in tag.find_all('li', recursive=False):
+                strong_text = li.find('strong')
+                if strong_text:
+                    add_paragraph(strong_text.text, bold=True)
+                ul = li.find('ul')
+                if ul:
+                    for ul_li in ul.find_all('li', recursive=False):
+                        strong_text = ul_li.find('strong')
+                        if strong_text:
+                            add_paragraph(f"{strong_text.text} {ul_li.text.replace(strong_text.text, '').strip()}")
+
+
 
 def set_docx_rtl(document):
     section = document.sections[0]
     section.right_margin = section.left_margin
     for paragraph in document.paragraphs:
-        set_rtl(paragraph)
+        paragraph.paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
 
 #-------------------------------------------------------Markdown to DOCX Functions----------------------------------------
 def convert_txt_to_docx_with_reference(txt_blob_path, caseid,destination_folder):
