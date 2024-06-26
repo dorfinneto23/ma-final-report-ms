@@ -90,10 +90,9 @@ def add_image_to_header(doc, image_path):
     height = 1.375
     section = doc.sections[0]
     header = section.header
-    paragraph = header.paragraphs[0]
+    paragraph = header.add_paragraph()  # Create a new paragraph in the header
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT  # Set paragraph alignment to left
     run = paragraph.add_run()
-    run.add_picture(image_path, width=Inches(2))  # Adjust width as needed
-    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
     if width and height:
         run.add_picture(image_path, width=Inches(width), height=Inches(height))
     elif width:
