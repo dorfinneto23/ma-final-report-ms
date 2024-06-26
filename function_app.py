@@ -86,12 +86,22 @@ def download_image_from_blob(path):
     
 # Function to add image to the header
 def add_image_to_header(doc, image_path):
+    width = 1.45
+    height = 1.375
     section = doc.sections[0]
     header = section.header
     paragraph = header.paragraphs[0]
     run = paragraph.add_run()
     run.add_picture(image_path, width=Inches(2))  # Adjust width as needed
-    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+    if width and height:
+        run.add_picture(image_path, width=Inches(width), height=Inches(height))
+    elif width:
+        run.add_picture(image_path, width=Inches(width))
+    elif height:
+        run.add_picture(image_path, height=Inches(height))
+    else:
+        run.add_picture(image_path)
 
 def parse_html_to_docx(soup, document):
 
