@@ -91,7 +91,7 @@ def add_image_to_header(doc, image_path):
     paragraph = header.paragraphs[0]
     run = paragraph.add_run()
     run.add_picture(image_path, width=Inches(2))  # Adjust width as needed
-    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.RIGHT
+    paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
 def parse_html_to_docx(soup, document):
 
